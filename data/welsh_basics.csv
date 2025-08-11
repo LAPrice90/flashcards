@@ -1,9 +1,9 @@
 id,front,back,image,audio,example,tags
-w001,Bore da,Good morning,media/image/morning.png,media/audio/Bore da.m4a,Bore da! Sut wyt ti?,greeting
-w002,Prynhawn da,Good afternoon,media/image/afternoon.png,media/audio/Prynhawn da.m4a,"Prynhawn da, Luke!",greeting
-w003,Noswaith dda,Good evening,media/image/evening.png,media/audio/Noswaith dda.m4a,Noswaith dda bawb.,greeting
-w004,Nos da,Good night,media/image/night.png,media/audio/Nos da.m4a,Nos da a chysga’n dda.,greeting
-w005,Sut wyt ti?,How are you? (informal),media/image/Sut wyt ti.png,media/audio/Sut wyt ti .m4a,Sut wyt ti heddiw?,conversation
+w001,Bore da,Good morning,media/image/morning.png,media/audio/Bore da.m4a,Bore da,greeting
+w002,Prynhawn da,Good afternoon,media/image/afternoon.png,media/audio/Prynhawn da.m4a,"Prynhawn da",greeting
+w003,Noswaith dda,Good evening,media/image/evening.png,media/audio/Noswaith dda.m4a,Noswaith dda.,greeting
+w004,Nos da,Good night,media/image/night.png,media/audio/Nos da.m4a,Nos da,greeting
+w005,Sut wyt ti?,How are you? (informal),media/image/Sut wyt ti.png,media/audio/Sut wyt ti .m4a,Sut wyt ti?,conversation
 w006,Da iawn,Very good,media/image/Da iawn.png,media/audio/Da iawn.m4a,"Da iawn, diolch!",response
 w007,Diolch,Thank you,media/image/Diolch.png,media/audio/Diolch.m4a,Diolch am dy help.,polite
 w008,Croeso,You're welcome,media/image/Croeso.png,media/audio/Croeso.m4a,Diolch — Croeso!,polite

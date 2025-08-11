@@ -182,28 +182,76 @@ async function renderReview(query) {
   const card = cards[0];
 
   const wrap = document.createElement('div');
-  wrap.innerHTML = `
-    <h1 class="h1">Review <span class="muted">(${mode} • ${active.name})</span></h1>
-    <section class="card">
-      <div class="fc">
-        <div class="fc-media">
-          ${card.image ? `<img src="${card.image}" alt="${card.front}">` : ''}
-        </div>
-        <div class="fc-body">
-          <div class="fc-front">
-            <strong>${mode === 'quiz' ? 'Prompt:' : 'Word:'}</strong>
-            ${mode === 'quiz' ? card.back + ' → (type in target language)' : card.front}
-          </div>
-          <div class="fc-example">${card.example || ''}</div>
-          <div class="fc-actions">
-            <button class="btn" id="revealBtn">${mode === 'quiz' ? 'Show Answer' : 'Show Translation'}</button>
-            ${card.audio ? `<button class="btn" id="audioBtn">Play Audio</button>` : ''}
-            <a class="btn" href="#/home">End Session</a>
-          </div>
-        </div>
+wrap.innerHTML = `
+  <h1 class="h1">Review <span class="muted">(${mode} • ${active.name})</span></h1>
+  <section class="card">
+    <div class="flashcard" id="flashcard">
+      <div class="flashcard-image" id="fcImg"></div>
+      <div class="flashcard-audio" id="fcAudioWrap"></div>
+      <div class="flashcard-text">
+        <div class="term" id="fcTerm"></div>
+        <div class="translation muted" id="fcTrans" style="display:none"></div>
+        <div class="example muted" id="fcEx"></div>
       </div>
-    </section>
-  `;
+      <div class="flashcard-actions">
+        <button class="btn primary" id="revealBtn">${mode === 'quiz' ? 'Show Answer' : 'Show Translation'}</button>
+        <button class="btn" id="audioBtn" style="display:none">Play Audio</button>
+        <button class="btn" id="nextBtn">Next</button>
+        <a class="btn" href="#/home">End Session</a>
+      </div>
+      <div class="flashcard-progress muted" id="fcProg"></div>
+    </div>
+  </section>
+`;
+
+let idx = 0;
+const img = wrap.querySelector('#fcImg');
+const audioWrap = wrap.querySelector('#fcAudioWrap');
+const term = wrap.querySelector('#fcTerm');
+const trans = wrap.querySelector('#fcTrans');
+const ex = wrap.querySelector('#fcEx');
+const prog = wrap.querySelector('#fcProg');
+const revealBtn = wrap.querySelector('#revealBtn');
+const audioBtn = wrap.querySelector('#audioBtn');
+const nextBtn = wrap.querySelector('#nextBtn');
+
+function renderCard() {
+  const c = cards[idx];
+  // image
+  img.innerHTML = c.image ? `<img src="${c.image}" alt="${c.front}">` : `<div class="no-image">No image</div>`;
+  // audio
+  audioBtn.style.display = c.audio ? '' : 'none';
+  audioWrap.innerHTML = ''; // (kept for future waveform/visualiser)
+  // text
+  term.textContent = (mode === 'quiz') ? c.back : c.front;
+  trans.textContent = (mode === 'quiz') ? c.front : c.back;
+  trans.style.display = 'none';
+  ex.textContent = c.example || '';
+  // progress
+  prog.textContent = `Card ${idx + 1} of ${cards.length}`;
+}
+
+renderCard();
+
+revealBtn.addEventListener('click', () => {
+  trans.style.display = '';
+});
+audioBtn.addEventListener('click', () => {
+  const c = cards[idx];
+  if (c.audio) new Audio(c.audio).play();
+});
+nextBtn.addEventListener('click', () => {
+  idx = (idx + 1) % cards.length;
+  renderCard();
+});
+
+// keyboard shortcuts
+window.onkeydown = (e) => {
+  if (e.code === 'Space') { e.preventDefault(); revealBtn.click(); }
+  if (e.key?.toLowerCase() === 'a') { e.preventDefault(); audioBtn?.click(); }
+  if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); nextBtn.click(); }
+};
+
 
   // Reveal button action
   wrap.querySelector('#revealBtn').addEventListener('click', () => {
