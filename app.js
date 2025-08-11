@@ -190,7 +190,7 @@ wrap.innerHTML = `
 
       <div class="flashcard-text">
         <div class="term" id="fcTerm"></div>
-        <div class="translation muted" id="fcTrans" style="display:none"></div>
+        <div class="translation" id="fcTrans" style="display:none"></div>
         <div class="example muted" id="fcEx"></div>
       </div>
 

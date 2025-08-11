@@ -148,7 +148,11 @@
   font-weight: 800;
   color: #fff;
 }
-.flashcard-text .translation { font-size: 18px; }
+.flashcard-text .translation {
+  font-size: 32px;
+  font-weight: 800;
+  color: #fff;
+}
 .flashcard-text .example { font-size: 14px; }
 
 /* Actions – reuse .btn palette from base.css */
