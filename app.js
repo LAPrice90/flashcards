@@ -191,7 +191,6 @@ wrap.innerHTML = `
       <div class="flashcard-text">
         <div class="term" id="fcTerm"></div>
         <div class="translation hidden" id="fcTrans"></div>
-        <div class="example muted" id="fcEx"></div>
       </div>
 
       <div class="flashcard-actions">
@@ -210,17 +209,10 @@ let idx = 0;
 const img = wrap.querySelector('#fcImg');
 const term = wrap.querySelector('#fcTerm');
 const trans = wrap.querySelector('#fcTrans');
-const ex = wrap.querySelector('#fcEx');
 const prog = wrap.querySelector('#fcProg');
 const prevBtn = wrap.querySelector('#prevBtn');
 const audioBtn = wrap.querySelector('#audioBtn');
 const nextBtn = wrap.querySelector('#nextBtn');
-
-// Increase card text size and make it white
-[term, trans].forEach(el => {
-  el.style.fontSize = '40px';
-  el.style.color = '#fff';
-});
 
 function renderCard() {
   const c = cards[idx];
@@ -236,7 +228,6 @@ function renderCard() {
   trans.textContent = (mode === 'quiz') ? c.front : c.back;
   term.classList.remove('hidden');
   trans.classList.add('hidden');
-  ex.textContent = c.example || '';
   // progress
   prog.textContent = `Card ${idx + 1} of ${cards.length}`;
 }

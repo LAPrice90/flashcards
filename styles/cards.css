@@ -58,11 +58,10 @@
 }
 .flashcard-text .term,
 .flashcard-text .translation {
-  font-size: 32px;
+  font-size: 40px;
   font-weight: 800;
-  color: var(--accent);
+  color: #fff;
 }
-.flashcard-text .example { font-size: 14px; }
 
 /* Actions – reuse .btn palette from base.css */
 .flashcard-actions {
