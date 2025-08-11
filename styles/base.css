@@ -63,6 +63,7 @@ body { background: var(--bg); color: var(--text); }
 .btn:hover { border-color: var(--accent); }
 .btn.primary { border-color: var(--accent); }
 .btn.green   { border-color: var(--green); }
+.hidden { display: none; }
 .muted { color: var(--muted); }
 .h1 { font-size: 28px; font-weight: 800; margin: 0 0 12px; }
 .row { display: flex; flex-wrap: wrap; gap: 16px; }

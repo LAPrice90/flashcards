@@ -190,7 +190,7 @@ wrap.innerHTML = `
 
       <div class="flashcard-text">
         <div class="term" id="fcTerm"></div>
-        <div class="translation" id="fcTrans" style="display:none"></div>
+        <div class="translation hidden" id="fcTrans"></div>
         <div class="example muted" id="fcEx"></div>
       </div>
 
@@ -228,8 +228,8 @@ function renderCard() {
   // text
   term.textContent = (mode === 'quiz') ? c.back : c.front;
   trans.textContent = (mode === 'quiz') ? c.front : c.back;
-  term.style.display = '';
-  trans.style.display = 'none';
+  term.classList.remove('hidden');
+  trans.classList.add('hidden');
   ex.textContent = c.example || '';
   // progress
   prog.textContent = `Card ${idx + 1} of ${cards.length}`;
@@ -238,12 +238,12 @@ function renderCard() {
 renderCard();
 
 term.addEventListener('click', () => {
-  term.style.display = 'none';
-  trans.style.display = '';
+  term.classList.add('hidden');
+  trans.classList.remove('hidden');
 });
 trans.addEventListener('click', () => {
-  trans.style.display = 'none';
-  term.style.display = '';
+  trans.classList.add('hidden');
+  term.classList.remove('hidden');
 });
 audioBtn.addEventListener('click', () => {
   const c = cards[idx];
