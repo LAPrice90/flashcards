@@ -198,7 +198,7 @@ wrap.innerHTML = `
         <button class="btn nav-btn" id="prevBtn">Previous</button>
         <button class="btn nav-btn" id="audioBtn" style="display:none">Play Audio</button>
         <button class="btn nav-btn" id="nextBtn">Next</button>
-        <a class="btn" href="#/home">End Session</a>
+        <a class="btn end-btn" href="#/home">End Session</a>
       </div>
 
       <div class="flashcard-progress muted" id="fcProg"></div>
