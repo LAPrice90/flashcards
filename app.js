@@ -248,13 +248,38 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 window.addEventListener('hashchange', render);
 
-// Load deck data from JSON file
+// Simple CSV parser returning array of objects using the header row for keys
+function parseCSV(text) {
+  const lines = text.trim().split(/\r?\n/);
+  const headers = lines.shift().split(',');
+  return lines
+    .filter(line => line.trim().length)
+    .map(line => {
+      const values = line.split(/,(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)/);
+      const obj = {};
+      headers.forEach((h, i) => {
+        obj[h.trim()] = (values[i] || '').replace(/^\"|\"$/g, '').trim();
+      });
+      return obj;
+    });
+}
+
+// Load deck data from CSV file
 async function loadDeckData(deckId) {
   try {
-    const res = await fetch(`data/${deckId}.json`); // path to your file
+    // Only CSV source is used now; JSON loading removed
+    const res = await fetch('data/welsh_basics.csv');
     if (!res.ok) throw new Error(`Failed to load deck: ${deckId}`);
-    const data = await res.json();
-    return data.cards || [];
+    const text = await res.text();
+    const rows = parseCSV(text);
+    // Map CSV headers to existing card keys
+    return rows.map(r => ({
+      front: r.word,
+      back: r.translation,
+      example: r.example,
+      image: r.image,
+      audio: r.audio,
+    }));
   } catch (err) {
     console.error(err);
     return [];
