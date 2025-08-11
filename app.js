@@ -216,6 +216,12 @@ const prevBtn = wrap.querySelector('#prevBtn');
 const audioBtn = wrap.querySelector('#audioBtn');
 const nextBtn = wrap.querySelector('#nextBtn');
 
+// Increase card text size and make it white
+[term, trans].forEach(el => {
+  el.style.fontSize = '40px';
+  el.style.color = '#fff';
+});
+
 function renderCard() {
   const c = cards[idx];
   // image
