@@ -1,6 +1,6 @@
 /* Card components (Study/Quiz) */
 .fc { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; align-items: stretch; }
-.fc-media { background: #0c0e14; border: 1px dashed var(--border); border-radius: 14px; display: grid; place-items: center; overflow: hidden; }
+.fc-media { background: transparent; border: 1px dashed var(--border); border-radius: 14px; display: grid; place-items: center; overflow: hidden; }
 .fc-media img { width: 100%; height: 100%; object-fit: cover; }
 .fc-body { display: flex; flex-direction: column; gap: 12px; }
 .fc-front { font-size: 28px; }
@@ -119,7 +119,7 @@
 .flashcard-image {
   width: 100%;
   height: 320px;             /* desktop height */
-  background: #0c0e14;
+  background: transparent;
   border: 1px solid var(--border);
   border-radius: 12px;
   overflow: hidden;
@@ -133,7 +133,7 @@
   width: auto;
   height: auto;
   object-fit: contain;        /* scale down without cropping */
-  background: #0c0e14;
+  background: transparent;
 }
 
 /* Text */
