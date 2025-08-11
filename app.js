@@ -184,21 +184,23 @@ async function renderReview(query) {
   const wrap = document.createElement('div');
 wrap.innerHTML = `
   <h1 class="h1">Review <span class="muted">(${mode} • ${active.name})</span></h1>
-  <section class="card">
+  <section class="card card--center">
     <div class="flashcard" id="flashcard">
       <div class="flashcard-image" id="fcImg"></div>
-      <div class="flashcard-audio" id="fcAudioWrap"></div>
+
       <div class="flashcard-text">
         <div class="term" id="fcTerm"></div>
         <div class="translation muted" id="fcTrans" style="display:none"></div>
         <div class="example muted" id="fcEx"></div>
       </div>
+
       <div class="flashcard-actions">
         <button class="btn primary" id="revealBtn">${mode === 'quiz' ? 'Show Answer' : 'Show Translation'}</button>
         <button class="btn" id="audioBtn" style="display:none">Play Audio</button>
         <button class="btn" id="nextBtn">Next</button>
         <a class="btn" href="#/home">End Session</a>
       </div>
+
       <div class="flashcard-progress muted" id="fcProg"></div>
     </div>
   </section>
@@ -206,7 +208,6 @@ wrap.innerHTML = `
 
 let idx = 0;
 const img = wrap.querySelector('#fcImg');
-const audioWrap = wrap.querySelector('#fcAudioWrap');
 const term = wrap.querySelector('#fcTerm');
 const trans = wrap.querySelector('#fcTrans');
 const ex = wrap.querySelector('#fcEx');
@@ -218,10 +219,11 @@ const nextBtn = wrap.querySelector('#nextBtn');
 function renderCard() {
   const c = cards[idx];
   // image
-  img.innerHTML = c.image ? `<img src="${c.image}" alt="${c.front}">` : `<div class="no-image">No image</div>`;
+  img.innerHTML = c.image
+    ? `<img src="${c.image}" alt="${c.front}">`
+    : `<div class="no-image muted">No image</div>`;
   // audio
   audioBtn.style.display = c.audio ? '' : 'none';
-  audioWrap.innerHTML = ''; // (kept for future waveform/visualiser)
   // text
   term.textContent = (mode === 'quiz') ? c.back : c.front;
   trans.textContent = (mode === 'quiz') ? c.front : c.back;
