@@ -91,6 +91,7 @@ button, .icon-btn, select { min-height: 40px; }
 /* Mobile layout */
 @media (max-width: 920px) {
   .topbar { display: grid; }
+  .topbar-title { display: none; }
   .layout { grid-template-columns: 1fr; }
   .side {
     position: fixed; inset: 56px 0 auto 0;
