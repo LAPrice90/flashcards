@@ -320,10 +320,11 @@ async function loadDeckData(deckId) {
     if (!res.ok) throw new Error(`Failed to load deck: ${deckId}`);
     const text = await res.text();
     const rows = parseCSV(text);
-    // Map CSV headers to existing card keys
+    // Map CSV headers to existing card keys. The CSV may use either
+    // `front/back` or the older `word/translation` column names.
     return rows.map(r => ({
-      front: r.word,
-      back: r.translation,
+      front: r.front || r.word,
+      back: r.back || r.translation,
       example: r.example,
       image: r.image,
       audio: r.audio,
