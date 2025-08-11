@@ -1,0 +1,30 @@
+id,front,back,image,audio,example,tags
+w001,Bore da,Good morning,media/images/good-morning.jpg,media/audio/good-morning.mp3,"Bore da! Sut wyt ti?",greeting
+w002,Prynhawn da,Good afternoon,media/images/good-afternoon.jpg,media/audio/good-afternoon.mp3,"Prynhawn da, Luke!",greeting
+w003,Noswaith dda,Good evening,media/images/good-evening.jpg,media/audio/good-evening.mp3,"Noswaith dda bawb.",greeting
+w004,Nos da,Good night,media/images/good-night.jpg,media/audio/good-night.mp3,"Nos da a chysga’n dda.",greeting
+w005,Sut wyt ti?,How are you? (informal),media/images/how-are-you.jpg,media/audio/how-are-you.mp3,"Sut wyt ti heddiw?",conversation
+w006,Da iawn,Very good,media/images/very-good.jpg,media/audio/very-good.mp3,"Da iawn, diolch!",response
+w007,Diolch,Thank you,media/images/thank-you.jpg,media/audio/thank-you.mp3,"Diolch am dy help.",polite
+w008,Croeso,You're welcome,media/images/youre-welcome.jpg,media/audio/youre-welcome.mp3,"Diolch — Croeso!",polite
+w009,Dw i’n hoffi…,I like…,media/images/i-like.jpg,media/audio/i-like.mp3,"Dw i’n hoffi coffi.",preferences
+w010,Dw i ddim yn hoffi…,I don’t like…,media/images/i-dont-like.jpg,media/audio/i-dont-like.mp3,"Dw i ddim yn hoffi te.",preferences
+w011,Ble mae…?,Where is…?,media/images/where-is.jpg,media/audio/where-is.mp3,"Ble mae’r orsaf?",travel,question
+w012,Dw i eisiau…,I want…,media/images/i-want.jpg,media/audio/i-want.mp3,"Dw i eisiau paned.",needs
+w013,Dw i ddim yn gwybod,I don’t know,media/images/i-dont-know.jpg,media/audio/i-dont-know.mp3,"Sori, dw i ddim yn gwybod.",conversation
+w014,Beth yw dy enw di?,What’s your name?,media/images/whats-your-name.jpg,media/audio/whats-your-name.mp3,"Beth yw dy enw di?",intro
+w015,Enw fi yw Luke,My name is Luke,media/images/my-name-is.jpg,media/audio/my-name-is.mp3,"Enw fi yw Luke.",intro,personal
+w016,Braf cwrdd â ti,Nice to meet you,media/images/nice-to-meet-you.jpg,media/audio/nice-to-meet-you.mp3,"Braf cwrdd â ti heddiw.",intro
+w017,Dw i’n byw yn Port Talbot,I live in Port Talbot,media/images/live-in-port-talbot.jpg,media/audio/live-in-port-talbot.mp3,"Dw i’n byw yn Port Talbot.",location,personal
+w018,A ti?,And you?,media/images/and-you.jpg,media/audio/and-you.mp3,"Dw i’n iawn. A ti?",conversation
+w019,Os gwelwch yn dda,Please (formal),media/images/please.jpg,media/audio/please.mp3,"Os gwelwch yn dda, gallwch chi helpu?",polite
+w020,Dw i’n dysgu Cymraeg,I am learning Welsh,media/images/learning-welsh.jpg,media/audio/learning-welsh.mp3,"Dw i’n dysgu Cymraeg bob dydd.",learning
+w021,Dw i’n byw yng Nghymru,I live in Wales,media/images/live-in-wales.jpg,media/audio/live-in-wales.mp3,"Dw i’n byw yng Nghymru.",location
+w022,Wyt ti’n siarad Cymraeg?,Do you speak Welsh? (informal),media/images/do-you-speak-welsh.jpg,media/audio/do-you-speak-welsh.mp3,"Wyt ti’n siarad Cymraeg?",learning,question
+w023,Dw i’n dysgu ychydig,I’m learning a little,media/images/learning-a-little.jpg,media/audio/learning-a-little.mp3,"Dw i’n dysgu ychydig o Gymraeg.",learning
+w024,Dw i’n newydd ddechrau,I have just started,media/images/just-started.jpg,media/audio/just-started.mp3,"Dw i’n newydd ddechrau dysgu.",learning
+w025,Mae’n bwrw glaw,It’s raining,media/images/its-raining.jpg,media/audio/its-raining.mp3,"Mae’n bwrw glaw heddiw.",weather
+w026,Mae’n heulog,It’s sunny,media/images/its-sunny.jpg,media/audio/its-sunny.mp3,"Mae’n heulog yn y prynhawn.",weather
+w027,Dw i’n oer,I’m cold,media/images/im-cold.jpg,media/audio/im-cold.mp3,"Dw i’n oer heddiw.",feelings
+w028,Dw i’n boeth,I’m hot,media/images/im-hot.jpg,media/audio/im-hot.mp3,"Mae hi’n boeth iawn.",feelings
+w029,Dw i’n sychedig,I’m thirsty,media/images/im-thirsty.jpg,media/audio/im-thirsty.mp3,"Dw i’n sychedig ar ôl rhedeg.",feelings

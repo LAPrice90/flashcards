@@ -1,0 +1,14 @@
+/* Home/Dashboard */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+}
+.stat .title { color: var(--muted); }
+.stat .big   { font-size: 32px; font-weight: 800; }
+.session-card .actions { display: flex; flex-wrap: wrap; gap: 10px; }
+
+@media (max-width: 920px) {
+  .stats-grid { grid-template-columns: 1fr; }
+}

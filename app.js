@@ -1,0 +1,262 @@
+/* ===========================
+   Minimal SPA with hardcoded decks,
+   active deck selection (persisted),
+   mobile sidebar, theme toggle, and
+   a basic Review page (UI only).
+   =========================== */
+
+/* ---- Hardcoded decks (upgrade later) ---- */
+const DECKS = [
+  { id: 'welsh_basics', name: 'Welsh – Basics', count: 29 },
+  { id: 'french_food',  name: 'French – Food',  count: 80  },
+  { id: 'verbs_core',   name: 'Core Verbs',     count: 200 },
+];
+
+/* ---- Storage keys ---- */
+const STORAGE = {
+  theme: 'fc_theme',
+  deck:  'fc_active_deck',
+};
+
+/* ---- State ---- */
+const STATE = {
+  activeDeckId: loadActiveDeckId(),
+};
+
+function loadActiveDeckId() {
+  const saved = localStorage.getItem(STORAGE.deck);
+  if (saved && DECKS.some(d => d.id === saved)) return saved;
+  return DECKS[0].id;
+}
+function setActiveDeck(id) {
+  if (!DECKS.some(d => d.id === id)) return;
+  STATE.activeDeckId = id;
+  localStorage.setItem(STORAGE.deck, id);
+  // sync sidebar select value
+  const sel = document.getElementById('deckSelect');
+  if (sel) sel.value = id;
+  render();
+}
+
+/* ---- Deck picker init ---- */
+function initDeckPicker() {
+  const sel = document.getElementById('deckSelect');
+  if (!sel) return;
+  sel.innerHTML = '';
+  DECKS.forEach(d => {
+    const opt = document.createElement('option');
+    opt.value = d.id; opt.textContent = `${d.name} (${d.count})`;
+    if (d.id === STATE.activeDeckId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  sel.addEventListener('change', e => setActiveDeck(e.target.value));
+}
+
+/* ---- Theme persistence (both toggles) ---- */
+(function initTheme() {
+  const saved = localStorage.getItem(STORAGE.theme);
+  if (saved === 'light' || saved === 'dark') document.body.setAttribute('data-theme', saved);
+  const isLight = document.body.getAttribute('data-theme') === 'light';
+
+  const wire = (id) => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.checked = isLight;
+    el.addEventListener('change', (e) => {
+      const mode = e.target.checked ? 'light' : 'dark';
+      document.body.setAttribute('data-theme', mode);
+      localStorage.setItem(STORAGE.theme, mode);
+    });
+  };
+  wire('themeToggle'); wire('themeToggleTop');
+})();
+
+/* ---- Router ---- */
+const routes = {
+  home: renderHome,
+  review: renderReview,
+  decks: renderDecks,
+  add: renderPlaceholder('Add Cards'),
+  stats: renderPlaceholder('Stats'),
+  settings: renderPlaceholder('Settings'),
+};
+
+async function render() {
+  const [route, query] = parseHash();
+
+  // highlight active link
+  document.querySelectorAll('.nav a').forEach(a => {
+    a.classList.toggle('active', a.dataset.route === route);
+  });
+
+  const el = document.getElementById('view');
+  const fn = routes[route] || routes.home;
+
+  // call the route; handle both sync and async views
+  const maybeNode = fn(query);
+  const node = (maybeNode instanceof Promise) ? await maybeNode : maybeNode;
+
+  el.replaceChildren(node);
+}
+
+
+function parseHash() {
+  const raw = (location.hash.startsWith('#/') ? location.hash.slice(2) : 'home');
+  const [path, qs] = raw.split('?');
+  const query = new URLSearchParams(qs || '');
+  return [path || 'home', query];
+}
+
+/* ---- Views ---- */
+function renderHome() {
+  const active = DECKS.find(d => d.id === STATE.activeDeckId);
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <h1 class="h1">Home</h1>
+    <div class="muted" style="margin-bottom:8px;">Active deck: <strong>${active.name}</strong></div>
+    <section class="stats-grid">
+      <div class="card stat"><div class="title">Due Today</div><div class="big" id="stat-due">0</div></div>
+      <div class="card stat"><div class="title">New Cards</div><div class="big" id="stat-new">${active.count}</div></div>
+      <div class="card stat"><div class="title">Streak</div><div class="big" id="stat-streak">—</div></div>
+    </section>
+    <section class="card session-card">
+      <h2 style="margin:0 0 8px; font-size:18px;">Choose mode:</h2>
+      <div class="actions">
+        <button class="btn primary" id="btn-study">Study</button>
+        <button class="btn green" id="btn-quiz">Quiz</button>
+      </div>
+    </section>
+  `;
+  wrap.querySelector('#btn-study').addEventListener('click', () =>
+    location.hash = `#/review?mode=study&deck=${STATE.activeDeckId}`
+  );
+  wrap.querySelector('#btn-quiz').addEventListener('click', () =>
+    location.hash = `#/review?mode=quiz&deck=${STATE.activeDeckId}`
+  );
+  return wrap;
+}
+
+function renderDecks() {
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `<h1 class="h1">Decks</h1>`;
+  const list = document.createElement('div');
+  list.className = 'row';
+  DECKS.forEach(d => {
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.minWidth = '260px';
+    card.innerHTML = `
+      <div style="font-weight:700">${d.name}</div>
+      <div class="muted">${d.count} cards</div>
+      <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button class="btn" data-id="${d.id}">Set Active</button>
+        <a class="btn" href="#/review?mode=quiz&deck=${d.id}">Review</a>
+      </div>
+    `;
+    card.querySelector('button').addEventListener('click', () => setActiveDeck(d.id));
+    list.appendChild(card);
+  });
+  wrap.appendChild(list);
+  return wrap;
+}
+
+async function renderReview(query) {
+  const mode = (query.get('mode') === 'study' ? 'study' : 'quiz');
+
+  // Pick deck from URL or fallback to current state
+  const deckId = query.get('deck') && DECKS.some(d => d.id === query.get('deck'))
+    ? query.get('deck') : STATE.activeDeckId;
+  if (deckId !== STATE.activeDeckId) setActiveDeck(deckId);
+
+  const active = DECKS.find(d => d.id === deckId);
+
+  // Load the deck's card data
+  const cards = await loadDeckData(deckId);
+  if (!cards.length) {
+    const errorWrap = document.createElement('div');
+    errorWrap.innerHTML = `<h1>No cards found for ${active.name}</h1>`;
+    return errorWrap;
+  }
+
+  // For now just show the first card
+  const card = cards[0];
+
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <h1 class="h1">Review <span class="muted">(${mode} • ${active.name})</span></h1>
+    <section class="card">
+      <div class="fc">
+        <div class="fc-media">
+          ${card.image ? `<img src="${card.image}" alt="${card.front}">` : ''}
+        </div>
+        <div class="fc-body">
+          <div class="fc-front">
+            <strong>${mode === 'quiz' ? 'Prompt:' : 'Word:'}</strong>
+            ${mode === 'quiz' ? card.back + ' → (type in target language)' : card.front}
+          </div>
+          <div class="fc-example">${card.example || ''}</div>
+          <div class="fc-actions">
+            <button class="btn" id="revealBtn">${mode === 'quiz' ? 'Show Answer' : 'Show Translation'}</button>
+            ${card.audio ? `<button class="btn" id="audioBtn">Play Audio</button>` : ''}
+            <a class="btn" href="#/home">End Session</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  `;
+
+  // Reveal button action
+  wrap.querySelector('#revealBtn').addEventListener('click', () => {
+    alert(mode === 'quiz' ? `Answer: ${card.front}` : `Translation: ${card.back}`);
+  });
+
+  // Audio button action
+  if (card.audio) {
+    wrap.querySelector('#audioBtn').addEventListener('click', () => {
+      new Audio(card.audio).play();
+    });
+  }
+
+  return wrap;
+}
+
+
+function renderPlaceholder(title) {
+  return function () {
+    const wrap = document.createElement('div');
+    wrap.innerHTML = `<h1 class="h1">${title}</h1><div class="card muted">Content coming soon.</div>`;
+    return wrap;
+  };
+}
+
+/* ---- Mobile sidebar ---- */
+function initMobileMenu() {
+  const btn = document.getElementById('menuToggle');
+  const side = document.querySelector('.side');
+  if (!btn || !side) return;
+  btn.addEventListener('click', () => side.classList.toggle('open'));
+  document.querySelectorAll('.nav a').forEach(a => {
+    a.addEventListener('click', () => side.classList.remove('open'));
+  });
+}
+
+/* ---- Boot ---- */
+window.addEventListener('DOMContentLoaded', () => {
+  initDeckPicker();
+  initMobileMenu();
+  render();
+});
+window.addEventListener('hashchange', render);
+
+// Load deck data from JSON file
+async function loadDeckData(deckId) {
+  try {
+    const res = await fetch(`data/${deckId}.json`); // path to your file
+    if (!res.ok) throw new Error(`Failed to load deck: ${deckId}`);
+    const data = await res.json();
+    return data.cards || [];
+  } catch (err) {
+    console.error(err);
+    return [];
+  }
+}

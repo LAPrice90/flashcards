@@ -1,0 +1,15 @@
+/* Card components (Study/Quiz) */
+.fc { display: grid; grid-template-columns: 1.2fr 1fr; gap: 16px; align-items: stretch; }
+.fc-media { background: #0c0e14; border: 1px dashed var(--border); border-radius: 14px; display: grid; place-items: center; overflow: hidden; }
+.fc-media img { width: 100%; height: 100%; object-fit: cover; }
+.fc-body { display: flex; flex-direction: column; gap: 12px; }
+.fc-front { font-size: 28px; }
+.fc-example { color: var(--muted); font-size: 14px; }
+.fc-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+.fc-grades  { display: grid; grid-template-columns: repeat(4, minmax(120px, 1fr)); gap: 10px; }
+.btn.again { border-color: var(--red); }
+.btn.hard  { border-color: var(--amber); }
+.btn.good  { border-color: var(--accent); }
+.btn.easy  { border-color: var(--green); }
+
+@media (max-width: 920px) { .fc { grid-template-columns: 1fr; } }
