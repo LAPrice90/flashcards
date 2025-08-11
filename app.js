@@ -195,9 +195,9 @@ wrap.innerHTML = `
       </div>
 
       <div class="flashcard-actions">
-        <button class="btn primary" id="revealBtn">${mode === 'quiz' ? 'Show Answer' : 'Show Translation'}</button>
-        <button class="btn" id="audioBtn" style="display:none">Play Audio</button>
-        <button class="btn" id="nextBtn">Next</button>
+        <button class="btn nav-btn" id="prevBtn">Previous</button>
+        <button class="btn nav-btn" id="audioBtn" style="display:none">Play Audio</button>
+        <button class="btn nav-btn" id="nextBtn">Next</button>
         <a class="btn" href="#/home">End Session</a>
       </div>
 
@@ -212,7 +212,7 @@ const term = wrap.querySelector('#fcTerm');
 const trans = wrap.querySelector('#fcTrans');
 const ex = wrap.querySelector('#fcEx');
 const prog = wrap.querySelector('#fcProg');
-const revealBtn = wrap.querySelector('#revealBtn');
+const prevBtn = wrap.querySelector('#prevBtn');
 const audioBtn = wrap.querySelector('#audioBtn');
 const nextBtn = wrap.querySelector('#nextBtn');
 
@@ -224,9 +224,11 @@ function renderCard() {
     : `<div class="no-image muted">No image</div>`;
   // audio
   audioBtn.style.display = c.audio ? '' : 'none';
+  if (c.audio) new Audio(c.audio).play();
   // text
   term.textContent = (mode === 'quiz') ? c.back : c.front;
   trans.textContent = (mode === 'quiz') ? c.front : c.back;
+  term.style.display = '';
   trans.style.display = 'none';
   ex.textContent = c.example || '';
   // progress
@@ -235,8 +237,13 @@ function renderCard() {
 
 renderCard();
 
-revealBtn.addEventListener('click', () => {
+term.addEventListener('click', () => {
+  term.style.display = 'none';
   trans.style.display = '';
+});
+trans.addEventListener('click', () => {
+  trans.style.display = 'none';
+  term.style.display = '';
 });
 audioBtn.addEventListener('click', () => {
   const c = cards[idx];
@@ -246,12 +253,16 @@ nextBtn.addEventListener('click', () => {
   idx = (idx + 1) % cards.length;
   renderCard();
 });
+prevBtn.addEventListener('click', () => {
+  idx = (idx - 1 + cards.length) % cards.length;
+  renderCard();
+});
 
 // keyboard shortcuts
 window.onkeydown = (e) => {
-  if (e.code === 'Space') { e.preventDefault(); revealBtn.click(); }
-  if (e.key?.toLowerCase() === 'a') { e.preventDefault(); audioBtn?.click(); }
   if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); nextBtn.click(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); prevBtn.click(); }
+  if (e.key?.toLowerCase() === 'a') { e.preventDefault(); audioBtn?.click(); }
 };
 
   return wrap;
