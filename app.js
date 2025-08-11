@@ -254,19 +254,6 @@ window.onkeydown = (e) => {
   if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); nextBtn.click(); }
 };
 
-
-  // Reveal button action
-  wrap.querySelector('#revealBtn').addEventListener('click', () => {
-    alert(mode === 'quiz' ? `Answer: ${card.front}` : `Translation: ${card.back}`);
-  });
-
-  // Audio button action
-  if (card.audio) {
-    wrap.querySelector('#audioBtn').addEventListener('click', () => {
-      new Audio(card.audio).play();
-    });
-  }
-
   return wrap;
 }
 
