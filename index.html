@@ -1,23 +1,57 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Flashcards</title>
-  <link rel="stylesheet" href="styles.css">
+
+  <!-- CSS (split) -->
+  <link rel="stylesheet" href="styles/base.css">
+  <link rel="stylesheet" href="styles/menu.css">
+  <link rel="stylesheet" href="styles/dashboard.css">
+  <link rel="stylesheet" href="styles/cards.css">
 </head>
-<body>
-  <div class="flashcard">
-    <div class="image-placeholder">
-      <!-- Image goes here -->
-    </div>
-    <div class="word">Word</div>
-    <button class="audio-button">play audio ▶</button>
-    <div class="difficulty-buttons">
-      <button class="easy-button">Easy</button>
-      <button class="medium-button">Medium</button>
-      <button class="hard-button">Hard</button>
-    </div>
+<body data-theme="dark">
+  <!-- Mobile/Tablet top bar -->
+  <header class="topbar">
+    <button id="menuToggle" class="icon-btn" aria-label="Toggle menu">☰</button>
+    <div class="topbar-title">Flashcards</div>
+    <label class="toggle topbar-toggle" title="Light / Dark">
+      <input type="checkbox" id="themeToggleTop" />
+    </label>
+  </header>
+
+  <div class="layout">
+    <!-- Sidebar -->
+    <aside class="side">
+      <div class="brand">🧠 Flashcards</div>
+
+      <div class="deck-picker">
+        <label for="deckSelect" class="muted">Deck</label>
+        <select id="deckSelect"></select>
+      </div>
+
+      <nav class="nav" aria-label="Primary">
+        <a href="#/home" data-route="home" class="active"><span>🏠</span> Home</a>
+        <a href="#/review" data-route="review"><span>🔁</span> Review</a>
+        <a href="#/decks" data-route="decks"><span>📚</span> Decks</a>
+        <a href="#/add" data-route="add"><span>➕</span> Add Cards</a>
+        <a href="#/stats" data-route="stats"><span>📈</span> Stats</a>
+        <a href="#/settings" data-route="settings"><span>⚙️</span> Settings</a>
+      </nav>
+
+      <div class="side-footer">
+        <label class="toggle">
+          <input type="checkbox" id="themeToggle" />
+          <span class="toggle-label">Light mode</span>
+        </label>
+      </div>
+    </aside>
+
+    <!-- Main view -->
+    <main id="view" class="main"></main>
   </div>
+
+  <script src="app.js" defer></script>
 </body>
 </html>
