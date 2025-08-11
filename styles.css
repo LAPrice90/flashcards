@@ -38,48 +38,52 @@ body {
   margin-bottom: 16px;
 }
 
+
 .audio-button {
-  background-color: #10a37f;
-  color: #ffffff;
+  background-color: #d1d5db;
+  color: #000000;
   border: none;
-  border-radius: 4px;
+  border-radius: 9999px;
   padding: 10px 20px;
   cursor: pointer;
   font-size: 1rem;
+  margin-bottom: 24px;
 }
 
 .audio-button:hover {
-  background-color: #0e8c6a;
+  background-color: #9ca3af;
 }
+
 
 .difficulty-buttons {
   width: 100%;
   display: flex;
   justify-content: space-between;
-  margin-top: 16px;
+  margin-top: 0;
 }
+
 
 .difficulty-buttons button {
   flex: 1;
   border: none;
-  border-radius: 4px;
-  padding: 10px 0;
-  font-size: 1rem;
+  border-radius: 9999px;
+  padding: 12px 0;
+  font-size: 1.1rem;
   cursor: pointer;
-  margin: 0 4px;
+  margin: 0 6px;
 }
 
 .easy-button {
-  background-color: #10a37f;
-  color: #ffffff;
+  background-color: #86efac;
+  color: #065f46;
 }
 
 .medium-button {
-  background-color: #f5c542;
-  color: #000000;
+  background-color: #fde68a;
+  color: #92400e;
 }
 
 .hard-button {
-  background-color: #ef4444;
-  color: #ffffff;
+  background-color: #fca5a5;
+  color: #7f1d1d;
 }
