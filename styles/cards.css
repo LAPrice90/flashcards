@@ -58,15 +58,14 @@
   margin: 0.5rem 0 1rem;
 }
 
-.flashcard-text .term {
-  font-size: 1.5rem;
-  font-weight: bold;
+.flashcard-text .term,
+.flashcard-text .translation {
+  font-weight: 700;
+  color: var(--accent);
 }
 
-.flashcard-text .translation {
-  font-size: 1rem;
-  color: #666;
-}
+.flashcard-text .term { font-size: 1.5rem; }
+.flashcard-text .translation { font-size: 1rem; }
 
 .flashcard-actions {
   display: flex;
@@ -143,15 +142,11 @@
   display: grid;
   gap: 6px;
 }
-.flashcard-text .term {
-  font-size: 32px;
-  font-weight: 800;
-  color: #fff;
-}
+.flashcard-text .term,
 .flashcard-text .translation {
   font-size: 32px;
   font-weight: 800;
-  color: #fff;
+  color: var(--accent);
 }
 .flashcard-text .example { font-size: 14px; }
 
