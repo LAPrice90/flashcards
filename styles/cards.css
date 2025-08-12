@@ -22,7 +22,7 @@
 }
 .flashcard {
   width: 100%;
-  max-width: 560px;
+  max-width: 400px;
   background: linear-gradient(180deg, var(--panel), var(--panel-2));
   border: 1px solid var(--border);
   border-radius: 16px;
@@ -30,41 +30,88 @@
   padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 1rem;
+  text-align: center;
 }
 
-/* Image block – handles portrait & landscape */
+/* Image */
 .flashcard-image {
   width: 100%;
-  aspect-ratio: 1 / 1;             /* desktop height */
-  background: transparent;
   border: 1px solid var(--border);
   border-radius: 12px;
-  overflow: hidden;
-  display: grid;
-  place-items: center;
-}
-.flashcard-image img {
+  object-fit: cover;
   display: block;
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;        /* scale down without cropping */
-  background: transparent;
+  cursor: pointer;
 }
 
-/* Text */
-.flashcard-text {
-  text-align: center;
-  display: grid;
-  gap: 6px;
+/* Phrase */
+.phrase-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
-.flashcard-text .term,
-.flashcard-text .translation {
+.term {
   font-size: 40px;
   font-weight: 800;
-  color: #fff;
+}
+.phonetic {
+  font-size: 14px;
+}
+.translation {
+  font-size: 22px;
+  font-weight: 700;
+}
+
+/* Word breakdown */
+.word-breakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.word-chip {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 999px;
+  padding: 4px 10px;
+  text-align: center;
+}
+.word-chip .welsh { font-weight: 700; display: block; }
+.word-chip .english { font-size: 12px; color: var(--muted); display: block; }
+
+/* Usage note */
+.usage-note {
+  font-size: 14px;
+  color: var(--muted);
+  margin: 0;
+}
+
+/* Example sentence */
+.example .ex-welsh {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.example .ex-english {
+  margin-top: 4px;
+  font-size: 14px;
+}
+
+/* Pattern examples */
+.pattern-examples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+}
+.pattern-examples button {
+  border: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: 12px;
+  padding: 4px 10px;
+  cursor: pointer;
 }
 
 /* Actions – reuse .btn palette from base.css */
@@ -107,9 +154,8 @@
 /* Mobile tweaks */
 @media (max-width: 920px) {
   .flashcard { max-width: 100%; padding: 14px; }
-  .flashcard-image { aspect-ratio: 1 / 1; }
-  .flashcard-text .term,
-  .flashcard-text .translation { font-size: 22px; }
+  .term { font-size: 28px; }
+  .translation { font-size: 18px; }
 }
 
 /* iPhone 13 Pro scale */
