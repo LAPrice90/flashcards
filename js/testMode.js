@@ -107,7 +107,15 @@
   function normalizeInput(s) {
     if (!s) return '';
     let out = s.toLowerCase();
-    out = out.normalize('NFKD').replace(/[\u0300-\u036f]/g, ''); // strip accents if typed without
+    // Strip all combining marks so that words typed without accents
+    // still match words that contain them (e.g. "t\u00E2n" vs "tan").
+    // The previous implementation only removed the basic Combining
+    // Diacritical Marks block which missed some extended marks. Using a
+    // broader set ensures special Welsh letters such as \u00E2 are
+    // normalised consistently.
+    out = out
+      .normalize('NFKD')
+      .replace(/[\u0300-\u036f\u1ab0-\u1aff\u1dc0-\u1dff\u20d0-\u20ff\ufe20-\ufe2f]/g, '');
     out = out
       .replace(/[\u2019\u2018]/g, "'")    // apostrophes
       .replace(/[\u201C\u201D]/g, '"')    // quotes
