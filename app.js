@@ -1,64 +1,68 @@
 /* ===========================
-   Minimal SPA with hardcoded decks,
-   active deck selection (persisted),
-   mobile sidebar, theme toggle, and
-   a basic Review page (UI only).
+   Mobile-first card
+   Flashcard ⇄ Detailed toggle
+   Click-term flip (flash only)
+   Single-button fast/slow audio
    =========================== */
 
-/* ---- Hardcoded decks (upgrade later) ---- */
-const DECKS = [
-  { id: 'welsh_basics', name: 'Welsh – Basics', count: 29 },
-  { id: 'french_food',  name: 'French – Food',  count: 80  },
-  { id: 'verbs_core',   name: 'Core Verbs',     count: 200 },
-];
+const DECKS = [{ id: 'welsh_basics', name: 'Welsh – Basics', count: 29 }];
 
-/* ---- Storage keys ---- */
 const STORAGE = {
   theme: 'fc_theme',
   deck:  'fc_active_deck',
+  view:  'fc_card_view_mode', // 'flash' | 'detail'
 };
 
-/* ---- State ---- */
 const STATE = {
   activeDeckId: loadActiveDeckId(),
+  viewMode: loadViewMode(), // 'flash' (default) | 'detail'
 };
 
 function loadActiveDeckId() {
   const saved = localStorage.getItem(STORAGE.deck);
-  if (saved && DECKS.some(d => d.id === saved)) return saved;
-  return DECKS[0].id;
+  return (saved && DECKS.some(d => d.id === saved)) ? saved : DECKS[0].id;
 }
 function setActiveDeck(id) {
   if (!DECKS.some(d => d.id === id)) return;
   STATE.activeDeckId = id;
   localStorage.setItem(STORAGE.deck, id);
-  // sync sidebar select value
   const sel = document.getElementById('deckSelect');
   if (sel) sel.value = id;
   render();
 }
 
-/* ---- Deck picker init ---- */
+function loadViewMode() {
+  const saved = localStorage.getItem(STORAGE.view);
+  return (saved === 'detail' || saved === 'flash') ? saved : 'flash';
+}
+function setViewMode(mode) {
+  STATE.viewMode = mode;
+  localStorage.setItem(STORAGE.view, mode);
+}
+
+/* ---- Deck picker ---- */
 function initDeckPicker() {
   const sel = document.getElementById('deckSelect');
   if (!sel) return;
   sel.innerHTML = '';
   DECKS.forEach(d => {
     const opt = document.createElement('option');
-    opt.value = d.id; opt.textContent = `${d.name} (${d.count})`;
+    opt.value = d.id;
+    opt.textContent = `${d.name} (${d.count})`;
     if (d.id === STATE.activeDeckId) opt.selected = true;
     sel.appendChild(opt);
   });
   sel.addEventListener('change', e => setActiveDeck(e.target.value));
 }
 
-/* ---- Theme persistence (both toggles) ---- */
+/* ---- Theme ---- */
 (function initTheme() {
   const saved = localStorage.getItem(STORAGE.theme);
-  if (saved === 'light' || saved === 'dark') document.body.setAttribute('data-theme', saved);
+  if (saved === 'light' || saved === 'dark') {
+    document.body.setAttribute('data-theme', saved);
+  }
   const isLight = document.body.getAttribute('data-theme') === 'light';
-
-  const wire = (id) => {
+  ['themeToggle','themeToggleTop'].forEach(id => {
     const el = document.getElementById(id);
     if (!el) return;
     el.checked = isLight;
@@ -67,8 +71,7 @@ function initDeckPicker() {
       document.body.setAttribute('data-theme', mode);
       localStorage.setItem(STORAGE.theme, mode);
     });
-  };
-  wire('themeToggle'); wire('themeToggleTop');
+  });
 })();
 
 /* ---- Router ---- */
@@ -83,28 +86,19 @@ const routes = {
 
 async function render() {
   const [route, query] = parseHash();
-
-  // highlight active link
-  document.querySelectorAll('.nav a').forEach(a => {
-    a.classList.toggle('active', a.dataset.route === route);
-  });
-
+  document.querySelectorAll('.nav a').forEach(a =>
+    a.classList.toggle('active', a.dataset.route === route)
+  );
   const el = document.getElementById('view');
   const fn = routes[route] || routes.home;
-
-  // call the route; handle both sync and async views
-  const maybeNode = fn(query);
-  const node = (maybeNode instanceof Promise) ? await maybeNode : maybeNode;
-
-  el.replaceChildren(node);
+  const out = fn(query);
+  el.replaceChildren(out instanceof Promise ? await out : out);
 }
 
-
 function parseHash() {
-  const raw = (location.hash.startsWith('#/') ? location.hash.slice(2) : 'home');
+  const raw = location.hash.startsWith('#/') ? location.hash.slice(2) : 'home';
   const [path, qs] = raw.split('?');
-  const query = new URLSearchParams(qs || '');
-  return [path || 'home', query];
+  return [path || 'home', new URLSearchParams(qs || '')];
 }
 
 /* ---- Views ---- */
@@ -149,7 +143,7 @@ function renderDecks() {
       <div style="font-weight:700">${d.name}</div>
       <div class="muted">${d.count} cards</div>
       <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
-        <button class="btn" data-id="${d.id}">Set Active</button>
+        <button class="btn">Set Active</button>
         <a class="btn" href="#/review?mode=quiz&deck=${d.id}">Review</a>
       </div>
     `;
@@ -161,221 +155,217 @@ function renderDecks() {
 }
 
 async function renderReview(query) {
-  const mode = (query.get('mode') === 'study' ? 'study' : 'quiz');
-
-  // Pick deck from URL or fallback to current state
+  // We keep 'mode' param but always start with Welsh front in flashcards
   const deckId = query.get('deck') && DECKS.some(d => d.id === query.get('deck'))
     ? query.get('deck') : STATE.activeDeckId;
   if (deckId !== STATE.activeDeckId) setActiveDeck(deckId);
 
   const active = DECKS.find(d => d.id === deckId);
-
-  // Load the deck's card data
   const cards = await loadDeckData(deckId);
   if (!cards.length) {
-    const errorWrap = document.createElement('div');
-    errorWrap.innerHTML = `<h1>No cards found for ${active.name}</h1>`;
-    return errorWrap;
+    const err = document.createElement('div');
+    err.innerHTML = `<h1>No cards found for ${active.name}</h1>`;
+    return err;
   }
+
+  // UI state
+  let idx = 0;
+  let showBack = false;   // front(Welsh) → back(English) in flash mode
+  let slowNext = false;   // audio alternator
+  let audio = null;
 
   const wrap = document.createElement('div');
-wrap.innerHTML = `
-  <h1 class="h1">Review <span class="muted">(${mode} • ${active.name})</span></h1>
-  <section class="card card--center">
-    <div class="flashcard" id="flashcard">
-      <img class="flashcard-image" id="fcImg" alt="" />
+  wrap.innerHTML = `
+    <h1 class="h1">Review <span class="muted">(${active.name})</span></h1>
+    <section class="card card--center">
+      <div class="flashcard" id="flashcard" data-view="${STATE.viewMode}">
+        <div class="fc-topbar">
+          <div class="fc-viewtoggle">
+            <label class="toggle">
+              <input type="checkbox" id="viewToggle" ${STATE.viewMode === 'detail' ? 'checked' : ''}>
+              <span class="tlabel"><span>Flashcard</span><span>Detailed</span></span>
+            </label>
+          </div>
+        </div>
 
-      <div class="phrase-row">
-        <div class="term" id="fcTerm"></div>
-        <button class="icon-btn" id="audioBtn" aria-label="Play audio" style="display:none">🔊</button>
+        <div class="flashcard-image" id="fcImg"></div>
+
+        <div class="fc-phrase">
+          <div class="term" id="fcTerm" title="Tap to flip in Flashcard mode"></div>
+          <button class="btn audio-btn" id="audioBtn" title="Play (alternates fast/slow)">🔊 Play</button>
+          <div class="phonetic" id="fcPhon"></div>
+        </div>
+
+        <div class="translation" id="fcTrans"></div>
+        <div class="breakdown" id="fcBreak"></div>
+        <div class="usage" id="fcUsage"></div>
+        <div class="example" id="fcExample"></div>
+        <div class="patterns" id="fcPatterns"></div>
+
+        <div class="flashcard-actions">
+          <button class="btn nav-btn" id="prevBtn">Previous</button>
+          <button class="btn nav-btn" id="nextBtn">Next</button>
+          <a class="btn end-btn" href="#/home">End Session</a>
+        </div>
+
+        <div class="flashcard-progress muted" id="fcProg"></div>
       </div>
+    </section>
+  `;
 
-      <div class="phonetic" id="fcPhon"></div>
-      <div class="translation" id="fcTrans"></div>
-      <div class="word-breakdown" id="fcWords"></div>
-      <p class="usage-note" id="fcUsage"></p>
+  const root     = wrap.querySelector('#flashcard');
+  const imgEl    = wrap.querySelector('#fcImg');
+  const termEl   = wrap.querySelector('#fcTerm');
+  const phonEl   = wrap.querySelector('#fcPhon');
+  const transEl  = wrap.querySelector('#fcTrans');
+  const brkEl    = wrap.querySelector('#fcBreak');
+  const useEl    = wrap.querySelector('#fcUsage');
+  const exEl     = wrap.querySelector('#fcExample');
+  const patEl    = wrap.querySelector('#fcPatterns');
+  const prevBtn  = wrap.querySelector('#prevBtn');
+  const nextBtn  = wrap.querySelector('#nextBtn');
+  const audioBtn = wrap.querySelector('#audioBtn');
+  const progEl   = wrap.querySelector('#fcProg');
+  const viewTgl  = wrap.querySelector('#viewToggle');
 
-      <div class="example" id="fcExample">
-        <div class="ex-welsh"><span id="exWelsh"></span><button class="icon-btn" id="exAudioBtn" style="display:none">🔊</button></div>
-        <div class="ex-english" id="exEnglish"></div>
-      </div>
+  // toggle view
+  viewTgl.addEventListener('change', () => {
+    const mode = viewTgl.checked ? 'detail' : 'flash';
+    setViewMode(mode);
+    root.dataset.view = mode;
+    showBack = false; // reset flip when switching
+    renderCard();
+  });
 
-      <div class="pattern-examples" id="fcPattern"></div>
-
-      <div class="flashcard-actions">
-        <button class="btn nav-btn" id="prevBtn">Previous</button>
-        <button class="btn nav-btn" id="nextBtn">Next</button>
-        <a class="btn end-btn" href="#/home">End Session</a>
-      </div>
-
-      <div class="flashcard-progress muted" id="fcProg"></div>
-    </div>
-  </section>
-`;
-
-let idx = 0;
-const img = wrap.querySelector('#fcImg');
-const term = wrap.querySelector('#fcTerm');
-const phon = wrap.querySelector('#fcPhon');
-const trans = wrap.querySelector('#fcTrans');
-const words = wrap.querySelector('#fcWords');
-const usage = wrap.querySelector('#fcUsage');
-const example = wrap.querySelector('#fcExample');
-const exWelsh = wrap.querySelector('#exWelsh');
-const exEnglish = wrap.querySelector('#exEnglish');
-const exAudioBtn = wrap.querySelector('#exAudioBtn');
-const pattern = wrap.querySelector('#fcPattern');
-const prog = wrap.querySelector('#fcProg');
-const prevBtn = wrap.querySelector('#prevBtn');
-const audioBtn = wrap.querySelector('#audioBtn');
-const nextBtn = wrap.querySelector('#nextBtn');
-
-// audio playback state
-let audio;
-let exAudio;
-let slowNext = false;
-
-function playAudio() {
-  if (!audio) return;
-  audio.pause();
-  audio.currentTime = 0;
-  audio.playbackRate = slowNext ? 0.8 : 1.0;
-  slowNext = !slowNext;
-  audio.play();
-}
-
-function renderCard() {
-  const c = cards[idx];
-  // image
-  if (c.image) {
-    img.src = c.image;
-    img.alt = c.front;
-    img.classList.remove('hidden');
-  } else {
-    img.src = '';
-    img.alt = '';
-    img.classList.add('hidden');
+  // audio helpers
+  function stopAudio() {
+    if (audio) { audio.pause(); audio = null; }
   }
-  // audio for phrase
-  audioBtn.style.display = c.audio ? '' : 'none';
-  if (audio) audio.pause();
-  if (c.audio) {
-    audio = new Audio(c.audio);
-    slowNext = false;
-    playAudio();
-  } else {
-    audio = null;
+  function playAudio(src) {
+    if (!src) return;
+    stopAudio();
+    audio = new Audio(src);
+    audio.playbackRate = slowNext ? 0.6 : 1.0; // alternate fast/slow
+    slowNext = !slowNext;
+    audio.play();
   }
-  // text fields
-  term.textContent = c.front;
-  trans.textContent = c.back;
-  phon.textContent = c.phonetic || '';
-  phon.classList.toggle('hidden', !c.phonetic || mode === 'quiz');
 
-  // word breakdown
-  words.innerHTML = '';
-  if (c.word_breakdown) {
-    c.word_breakdown.split(',').map(s => s.trim()).filter(Boolean).forEach(pair => {
-      const [w, e] = pair.split('=').map(p => p.trim());
-      const chip = document.createElement('div');
-      chip.className = 'word-chip';
-      chip.innerHTML = `<span class="welsh">${w}</span><span class="english">${e}</span>`;
-      words.appendChild(chip);
-    });
-  }
-  words.classList.toggle('hidden', !c.word_breakdown || mode === 'quiz');
+  // parsing helpers
+  const parsePairs = s => (s ? s.split(',').map(x => x.trim()).filter(Boolean) : []);
+  const parsePatterns = s => {
+    if (!s) return [];
+    const parts = s.includes('/') ? s.split('/') : s.split(',');
+    return parts.map(x => x.trim()).filter(Boolean);
+  };
 
-  // usage note
-  usage.textContent = c.usage_note || '';
-  usage.classList.toggle('hidden', !c.usage_note || mode === 'quiz');
+  // render card (no duplicate English, click term flips in flash)
+  function renderCard() {
+    const c = cards[idx];
+    const isDetail = (STATE.viewMode === 'detail');
 
-  // example sentence
-  exWelsh.textContent = '';
-  exEnglish.textContent = '';
-  example.classList.toggle('hidden', !c.example || mode === 'quiz');
-  if (c.example) {
-    let wel = c.example;
-    let eng = c.example_translation || '';
-    if (!eng) {
-      const m = c.example.match(/(.+)[\u2013\u2014\-](.+)/); // dash separators
-      if (m) { wel = m[1].trim(); eng = m[2].trim(); }
+    // image
+    imgEl.innerHTML = c.image
+      ? `<img src="${c.image}" alt="${c.front}">`
+      : `<div class="no-image muted">No image</div>`;
+
+    // phrase + phonetic
+    if (isDetail) {
+      termEl.textContent = c.front;              // Welsh always on top in detailed
+      phonEl.textContent = c.phonetic || '';
+      transEl.textContent = c.back || '';        // English shown once below
+      transEl.classList.remove('hidden');
+    } else {
+      termEl.textContent = showBack ? c.back : c.front; // flip between Welsh/English
+      phonEl.textContent = '';                            // keep flashcard clean
+      transEl.textContent = '';                           // never show separate translation line in flash
+      transEl.classList.add('hidden');
     }
-    exWelsh.textContent = wel;
-    exEnglish.textContent = eng;
-    exEnglish.classList.toggle('hidden', !eng);
-  }
-  // example audio
-  if (exAudio) exAudio.pause();
-  if (c.example_audio) {
-    exAudio = new Audio(c.example_audio);
-    exAudioBtn.style.display = '';
-    exAudioBtn.onclick = () => {
-      if (!exAudio) return;
-      exAudio.currentTime = 0;
-      exAudio.play();
-    };
-  } else {
-    exAudio = null;
-    exAudioBtn.style.display = 'none';
-  }
 
-  // pattern examples
-  pattern.innerHTML = '';
-  if (c.pattern_examples) {
-    const phrases = c.pattern_examples.replace(/,$/, '').split('/').map(p => p.trim()).filter(Boolean);
-    phrases.forEach(p => {
-      const btn = document.createElement('button');
-      btn.textContent = p;
-      btn.addEventListener('click', () => {
-        const found = cards.findIndex(x => x.front === p);
-        if (found !== -1) {
-          idx = found;
-          renderCard();
-        }
+    // breakdown (detail only)
+    brkEl.innerHTML = '';
+    if (isDetail && c.word_breakdown) {
+      const list = document.createElement('div');
+      list.className = 'breakdown-list';
+      parsePairs(c.word_breakdown).forEach(pair => {
+        const chip = document.createElement('div');
+        chip.className = 'chip';
+        chip.textContent = pair;
+        list.appendChild(chip);
       });
-      pattern.appendChild(btn);
-    });
-    pattern.classList.toggle('hidden', mode === 'quiz');
-  } else {
-    pattern.classList.add('hidden');
+      brkEl.appendChild(list);
+    }
+
+    // usage
+    useEl.textContent = isDetail ? (c.usage_note || '') : '';
+
+    // example (detail always; flash only on back if you want)
+    if (isDetail) {
+      exEl.innerHTML = c.example ? `<div class="ex-welsh">${c.example}</div>` : '';
+    } else {
+      exEl.innerHTML = showBack && c.example ? `<div class="ex-welsh">${c.example}</div>` : '';
+    }
+
+    // patterns (detail only)
+    patEl.innerHTML = '';
+    if (isDetail && c.pattern_examples) {
+      const ul = document.createElement('ul');
+      ul.className = 'patterns-list';
+      parsePatterns(c.pattern_examples).forEach(p => {
+        const li = document.createElement('li');
+        li.textContent = p;
+        ul.appendChild(li);
+      });
+      patEl.appendChild(ul);
+    }
+
+    // progress
+    progEl.textContent = `Card ${idx + 1} of ${cards.length}`;
+
+    // click-to-flip behaviour
+    termEl.style.cursor = (STATE.viewMode === 'flash') ? 'pointer' : 'default';
   }
 
-  // translation visibility
-  if (mode === 'quiz') {
-    trans.classList.add('hidden');
-  } else {
-    trans.classList.remove('hidden');
-  }
-  // progress
-  prog.textContent = `Card ${idx + 1} of ${cards.length}`;
-}
-
-renderCard();
-
-const flip = () => { if (mode === 'quiz') trans.classList.toggle('hidden'); };
-term.addEventListener('click', flip);
-trans.addEventListener('click', flip);
-audioBtn.addEventListener('click', () => { playAudio(); });
-img.addEventListener('click', () => { playAudio(); });
-nextBtn.addEventListener('click', () => {
-  idx = (idx + 1) % cards.length;
+  // initial render
   renderCard();
-});
-prevBtn.addEventListener('click', () => {
-  idx = (idx - 1 + cards.length) % cards.length;
-  renderCard();
-});
 
-// keyboard shortcuts
-window.onkeydown = (e) => {
-  if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); nextBtn.click(); }
-  if (e.key === 'ArrowLeft') { e.preventDefault(); prevBtn.click(); }
-  if (e.key?.toLowerCase() === 'a') { e.preventDefault(); audioBtn?.click(); }
-};
+  // interactions
+  imgEl.addEventListener('click', () => {
+    const c = cards[idx];
+    if (c.audio) playAudio(c.audio);
+  });
+  audioBtn.addEventListener('click', () => {
+    const c = cards[idx];
+    if (c.audio) playAudio(c.audio);
+  });
+  termEl.addEventListener('click', () => {
+    if (STATE.viewMode === 'flash') {
+      showBack = !showBack;
+      renderCard();
+    }
+  });
+  nextBtn.addEventListener('click', () => {
+    stopAudio();
+    idx = (idx + 1) % cards.length;
+    showBack = false;
+    renderCard();
+  });
+  prevBtn.addEventListener('click', () => {
+    stopAudio();
+    idx = (idx - 1 + cards.length) % cards.length;
+    showBack = false;
+    renderCard();
+  });
+
+  // keyboard (desktop convenience)
+  window.onkeydown = (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); nextBtn.click(); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); prevBtn.click(); }
+    if (e.key?.toLowerCase() === 'a') { e.preventDefault(); audioBtn.click(); }
+    if (e.key?.toLowerCase() === 'f' && STATE.viewMode === 'flash') { e.preventDefault(); termEl.click(); }
+  };
 
   return wrap;
 }
-
 
 function renderPlaceholder(title) {
   return function () {
@@ -391,9 +381,9 @@ function initMobileMenu() {
   const side = document.querySelector('.side');
   if (!btn || !side) return;
   btn.addEventListener('click', () => side.classList.toggle('open'));
-  document.querySelectorAll('.nav a').forEach(a => {
-    a.addEventListener('click', () => side.classList.remove('open'));
-  });
+  document.querySelectorAll('.nav a').forEach(a =>
+    a.addEventListener('click', () => side.classList.remove('open'))
+  );
 }
 
 /* ---- Boot ---- */
@@ -404,7 +394,7 @@ window.addEventListener('DOMContentLoaded', () => {
 });
 window.addEventListener('hashchange', render);
 
-// Simple CSV parser returning array of objects using the header row for keys
+/* ---- CSV loader ---- */
 function parseCSV(text) {
   const lines = text.trim().split(/\r?\n/);
   const headers = lines.shift().split(',');
@@ -413,35 +403,30 @@ function parseCSV(text) {
     .map(line => {
       const values = line.split(/,(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)/);
       const obj = {};
-      headers.forEach((h, i) => {
-        obj[h.trim()] = (values[i] || '').replace(/^\"|\"$/g, '').trim();
-      });
+      headers.forEach((h, i) => { obj[h.trim()] = (values[i] || '').replace(/^\"|\"$/g, '').trim(); });
       return obj;
     });
 }
 
-// Load deck data from CSV file
 async function loadDeckData(deckId) {
   try {
-    // Only CSV source is used now; JSON loading removed
     const res = await fetch('data/welsh_basics.csv');
     if (!res.ok) throw new Error(`Failed to load deck: ${deckId}`);
     const text = await res.text();
     const rows = parseCSV(text);
-    // Map CSV headers to existing card keys. The CSV may use either
-    // `front/back` or the older `word/translation` column names.
     return rows.map(r => ({
-      front: r.front || r.word,
-      back: r.back || r.translation,
-      example: r.example,
-      image: r.image,
-      audio: r.audio,
-      phonetic: r.phonetic,
-      word_breakdown: r.word_breakdown,
-      usage_note: r.usage_note,
-      pattern_examples: r.pattern_examples,
-      example_audio: r.example_audio,
-      example_translation: r.example_translation,
+      id: r.id || '',
+      front: r.front || r.word || '',
+      back: r.back || r.translation || '',
+      example: r.example || '',
+      image: r.image || '',
+      audio: r.audio || '',
+      phonetic: r.phonetic || '',
+      word_breakdown: r.word_breakdown || '',
+      usage_note: r.usage_note || '',
+      pattern_examples: r.pattern_examples || '',
+      slow_audio: r.slow_audio || '',
+      tags: r.tags || '',
     }));
   } catch (err) {
     console.error(err);
