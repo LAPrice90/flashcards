@@ -178,24 +178,32 @@ async function renderReview(query) {
     return errorWrap;
   }
 
-  // For now just show the first card
-  const card = cards[0];
-
   const wrap = document.createElement('div');
 wrap.innerHTML = `
   <h1 class="h1">Review <span class="muted">(${mode} • ${active.name})</span></h1>
   <section class="card card--center">
     <div class="flashcard" id="flashcard">
-      <div class="flashcard-image" id="fcImg"></div>
+      <img class="flashcard-image" id="fcImg" alt="" />
 
-      <div class="flashcard-text">
+      <div class="phrase-row">
         <div class="term" id="fcTerm"></div>
-        <div class="translation hidden" id="fcTrans"></div>
+        <button class="icon-btn" id="audioBtn" aria-label="Play audio" style="display:none">🔊</button>
       </div>
+
+      <div class="phonetic" id="fcPhon"></div>
+      <div class="translation" id="fcTrans"></div>
+      <div class="word-breakdown" id="fcWords"></div>
+      <p class="usage-note" id="fcUsage"></p>
+
+      <div class="example" id="fcExample">
+        <div class="ex-welsh"><span id="exWelsh"></span><button class="icon-btn" id="exAudioBtn" style="display:none">🔊</button></div>
+        <div class="ex-english" id="exEnglish"></div>
+      </div>
+
+      <div class="pattern-examples" id="fcPattern"></div>
 
       <div class="flashcard-actions">
         <button class="btn nav-btn" id="prevBtn">Previous</button>
-        <button class="btn nav-btn" id="audioBtn" style="display:none">Play Audio</button>
         <button class="btn nav-btn" id="nextBtn">Next</button>
         <a class="btn end-btn" href="#/home">End Session</a>
       </div>
@@ -208,7 +216,15 @@ wrap.innerHTML = `
 let idx = 0;
 const img = wrap.querySelector('#fcImg');
 const term = wrap.querySelector('#fcTerm');
+const phon = wrap.querySelector('#fcPhon');
 const trans = wrap.querySelector('#fcTrans');
+const words = wrap.querySelector('#fcWords');
+const usage = wrap.querySelector('#fcUsage');
+const example = wrap.querySelector('#fcExample');
+const exWelsh = wrap.querySelector('#exWelsh');
+const exEnglish = wrap.querySelector('#exEnglish');
+const exAudioBtn = wrap.querySelector('#exAudioBtn');
+const pattern = wrap.querySelector('#fcPattern');
 const prog = wrap.querySelector('#fcProg');
 const prevBtn = wrap.querySelector('#prevBtn');
 const audioBtn = wrap.querySelector('#audioBtn');
@@ -216,6 +232,7 @@ const nextBtn = wrap.querySelector('#nextBtn');
 
 // audio playback state
 let audio;
+let exAudio;
 let slowNext = false;
 
 function playAudio() {
@@ -230,10 +247,16 @@ function playAudio() {
 function renderCard() {
   const c = cards[idx];
   // image
-  img.innerHTML = c.image
-    ? `<img src="${c.image}" alt="${c.front}">`
-    : `<div class="no-image muted">No image</div>`;
-  // audio
+  if (c.image) {
+    img.src = c.image;
+    img.alt = c.front;
+    img.classList.remove('hidden');
+  } else {
+    img.src = '';
+    img.alt = '';
+    img.classList.add('hidden');
+  }
+  // audio for phrase
   audioBtn.style.display = c.audio ? '' : 'none';
   if (audio) audio.pause();
   if (c.audio) {
@@ -243,28 +266,97 @@ function renderCard() {
   } else {
     audio = null;
   }
-  // text
-  term.textContent = (mode === 'quiz') ? c.back : c.front;
-  trans.textContent = (mode === 'quiz') ? c.front : c.back;
-  term.classList.remove('hidden');
-  trans.classList.add('hidden');
+  // text fields
+  term.textContent = c.front;
+  trans.textContent = c.back;
+  phon.textContent = c.phonetic || '';
+  phon.classList.toggle('hidden', !c.phonetic || mode === 'quiz');
+
+  // word breakdown
+  words.innerHTML = '';
+  if (c.word_breakdown) {
+    c.word_breakdown.split(',').map(s => s.trim()).filter(Boolean).forEach(pair => {
+      const [w, e] = pair.split('=').map(p => p.trim());
+      const chip = document.createElement('div');
+      chip.className = 'word-chip';
+      chip.innerHTML = `<span class="welsh">${w}</span><span class="english">${e}</span>`;
+      words.appendChild(chip);
+    });
+  }
+  words.classList.toggle('hidden', !c.word_breakdown || mode === 'quiz');
+
+  // usage note
+  usage.textContent = c.usage_note || '';
+  usage.classList.toggle('hidden', !c.usage_note || mode === 'quiz');
+
+  // example sentence
+  exWelsh.textContent = '';
+  exEnglish.textContent = '';
+  example.classList.toggle('hidden', !c.example || mode === 'quiz');
+  if (c.example) {
+    let wel = c.example;
+    let eng = c.example_translation || '';
+    if (!eng) {
+      const m = c.example.match(/(.+)[\u2013\u2014\-](.+)/); // dash separators
+      if (m) { wel = m[1].trim(); eng = m[2].trim(); }
+    }
+    exWelsh.textContent = wel;
+    exEnglish.textContent = eng;
+    exEnglish.classList.toggle('hidden', !eng);
+  }
+  // example audio
+  if (exAudio) exAudio.pause();
+  if (c.example_audio) {
+    exAudio = new Audio(c.example_audio);
+    exAudioBtn.style.display = '';
+    exAudioBtn.onclick = () => {
+      if (!exAudio) return;
+      exAudio.currentTime = 0;
+      exAudio.play();
+    };
+  } else {
+    exAudio = null;
+    exAudioBtn.style.display = 'none';
+  }
+
+  // pattern examples
+  pattern.innerHTML = '';
+  if (c.pattern_examples) {
+    const phrases = c.pattern_examples.replace(/,$/, '').split('/').map(p => p.trim()).filter(Boolean);
+    phrases.forEach(p => {
+      const btn = document.createElement('button');
+      btn.textContent = p;
+      btn.addEventListener('click', () => {
+        const found = cards.findIndex(x => x.front === p);
+        if (found !== -1) {
+          idx = found;
+          renderCard();
+        }
+      });
+      pattern.appendChild(btn);
+    });
+    pattern.classList.toggle('hidden', mode === 'quiz');
+  } else {
+    pattern.classList.add('hidden');
+  }
+
+  // translation visibility
+  if (mode === 'quiz') {
+    trans.classList.add('hidden');
+  } else {
+    trans.classList.remove('hidden');
+  }
   // progress
   prog.textContent = `Card ${idx + 1} of ${cards.length}`;
 }
 
 renderCard();
 
-term.addEventListener('click', () => {
-  term.classList.add('hidden');
-  trans.classList.remove('hidden');
-});
-trans.addEventListener('click', () => {
-  trans.classList.add('hidden');
-  term.classList.remove('hidden');
-});
-audioBtn.addEventListener('click', () => {
-  playAudio();
-});
+const flip = () => { if (mode === 'quiz') trans.classList.toggle('hidden'); };
+term.addEventListener('click', flip);
+trans.addEventListener('click', flip);
+audioBtn.addEventListener('click', () => { playAudio(); });
+img.addEventListener('click', () => { playAudio(); });
 nextBtn.addEventListener('click', () => {
   idx = (idx + 1) % cards.length;
   renderCard();
@@ -344,6 +436,12 @@ async function loadDeckData(deckId) {
       example: r.example,
       image: r.image,
       audio: r.audio,
+      phonetic: r.phonetic,
+      word_breakdown: r.word_breakdown,
+      usage_note: r.usage_note,
+      pattern_examples: r.pattern_examples,
+      example_audio: r.example_audio,
+      example_translation: r.example_translation,
     }));
   } catch (err) {
     console.error(err);
