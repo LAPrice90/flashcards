@@ -11,11 +11,13 @@ const STORAGE = {
   theme: 'fc_theme',
   deck:  'fc_active_deck',
   view:  'fc_card_view_mode', // 'flash' | 'detail'
+  examplesEN: 'fc_examples_en', // <--- ADD THIS
 };
 
 const STATE = {
   activeDeckId: loadActiveDeckId(),
   viewMode: loadViewMode(), // 'flash' (default) | 'detail'
+  showExamplesEN: loadExamplesEN(), // <--- ADD THIS
 };
 
 function loadActiveDeckId() {
@@ -39,6 +41,15 @@ function setViewMode(mode) {
   STATE.viewMode = mode;
   localStorage.setItem(STORAGE.view, mode);
 }
+function loadExamplesEN() {
+  const saved = localStorage.getItem(STORAGE.examplesEN);
+  return saved === 'true'; // default false
+}
+function setExamplesEN(v) {
+  STATE.showExamplesEN = !!v;
+  localStorage.setItem(STORAGE.examplesEN, String(!!v));
+}
+
 
 /* ---- Deck picker ---- */
 function initDeckPicker() {
@@ -82,6 +93,7 @@ const routes = {
   add: renderPlaceholder('Add Cards'),
   stats: renderPlaceholder('Stats'),
   settings: renderPlaceholder('Settings'),
+  test: renderTestShell,
 };
 
 async function render() {
@@ -125,10 +137,22 @@ function renderHome() {
     location.hash = `#/review?mode=study&deck=${STATE.activeDeckId}`
   );
   wrap.querySelector('#btn-quiz').addEventListener('click', () =>
-    location.hash = `#/review?mode=quiz&deck=${STATE.activeDeckId}`
+    location.hash = '#/test'
   );
   return wrap;
 }
+
+function renderTestShell() {
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <h1 class="h1">Test Mode</h1>
+    <section class="card card--center">
+      <div id="test-container"></div>
+    </section>
+  `;
+  return wrap;
+}
+
 
 function renderDecks() {
   const wrap = document.createElement('div');
@@ -254,9 +278,11 @@ async function renderReview(query) {
   const parsePairs = s => (s ? s.split(',').map(x => x.trim()).filter(Boolean) : []);
   const parsePatterns = s => {
     if (!s) return [];
-    const parts = s.includes('/') ? s.split('/') : s.split(',');
-    return parts.map(x => x.trim()).filter(Boolean);
+    // support '|', '/', or ',' as separators
+    const sep = s.includes('|') ? '|' : (s.includes('/') ? '/' : ',');
+    return s.split(sep).map(x => x.trim()).filter(Boolean);
   };
+
 
   // render card (no duplicate English, click term flips in flash)
   function renderCard() {
@@ -305,18 +331,59 @@ async function renderReview(query) {
       exEl.innerHTML = showBack && c.example ? `<div class="ex-welsh">${c.example}</div>` : '';
     }
 
-    // patterns (detail only)
+
+    // patterns (detail only) — tap anywhere in the area to toggle English
     patEl.innerHTML = '';
     if (isDetail && c.pattern_examples) {
-      const ul = document.createElement('ul');
-      ul.className = 'patterns-list';
-      parsePatterns(c.pattern_examples).forEach(p => {
-        const li = document.createElement('li');
-        li.textContent = p;
-        ul.appendChild(li);
-      });
-      patEl.appendChild(ul);
+      const normalize = s => (s || '').toLowerCase().trim();
+
+      // Use your existing parsePatterns so separators stay consistent (/, or ,)
+      const welshArr = parsePatterns(c.pattern_examples);
+      const enArr    = parsePatterns(c.pattern_examples_en || '');
+
+      // Pair up W/EN and exclude the current phrase
+      const pairs = welshArr
+        .map((w, i) => ({ w, e: enArr[i] || '' }))
+        .filter(p =>
+          normalize(p.w) !== normalize(c.front) &&
+          normalize(p.w) !== normalize(c.back)
+        );
+
+      if (pairs.length) {
+        // Header hint
+        const hdr = document.createElement('div');
+        hdr.className = 'muted';
+        hdr.style.textAlign = 'center';
+        hdr.style.fontSize = '12px';
+        hdr.style.userSelect = 'none';
+        hdr.textContent = STATE.showExamplesEN
+          ? 'Related phrases (tap to hide English)'
+          : 'Related phrases (tap to show English)';
+        patEl.appendChild(hdr);
+
+        // List
+        const ul = document.createElement('ul');
+        ul.className = 'patterns-list';
+        ul.style.cursor = 'pointer';
+        pairs.forEach(p => {
+          const li = document.createElement('li');
+          li.textContent =
+            (STATE.showExamplesEN && p.e) ? `${p.w} — ${p.e}` : p.w;
+          ul.appendChild(li);
+        });
+        patEl.appendChild(ul);
+
+        // Tap anywhere in header or list to toggle EN
+        const toggleEN = () => {
+          setExamplesEN(!STATE.showExamplesEN); // persist + update state
+          renderCard();                         // re-render this card
+        };
+        hdr.addEventListener('click', toggleEN);
+        ul.addEventListener('click', toggleEN);
+      }
     }
+
+
 
     // progress
     progEl.textContent = `Card ${idx + 1} of ${cards.length}`;
@@ -414,6 +481,14 @@ async function loadDeckData(deckId) {
     if (!res.ok) throw new Error(`Failed to load deck: ${deckId}`);
     const text = await res.text();
     const rows = parseCSV(text);
+    rows.forEach((r, i) => {
+      const expected = ['id','front','back','image','audio','example','tags','phonetic','word_breakdown','usage_note','pattern_examples','pattern_examples_en'];
+      const missing = expected.filter(k => !(k in r));
+      if (missing.length) {
+        console.warn(`Row ${i+2} likely misparsed. Missing: ${missing.join(', ')}. Did a field with commas lack quotes?`, r);
+      }
+    });
+
     return rows.map(r => ({
       id: r.id || '',
       front: r.front || r.word || '',
@@ -425,6 +500,7 @@ async function loadDeckData(deckId) {
       word_breakdown: r.word_breakdown || '',
       usage_note: r.usage_note || '',
       pattern_examples: r.pattern_examples || '',
+      pattern_examples_en: r.pattern_examples_en || '',
       slow_audio: r.slow_audio || '',
       tags: r.tags || '',
     }));
