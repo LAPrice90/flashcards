@@ -214,6 +214,10 @@ async function renderReview(query) {
 
   // initial render
   renderCard();
+  // autoplay new card at normal speed
+  slowNext = false;
+  const first = cards[idx];
+  if (first.audio) playAudio(first.audio);
 
   // interactions
   imgEl.addEventListener('click', () => {
@@ -235,12 +239,20 @@ async function renderReview(query) {
     idx = (idx + 1) % cards.length;
     showBack = false;
     renderCard();
+    // autoplay next card at normal speed
+    slowNext = false;
+    const c = cards[idx];
+    if (c.audio) playAudio(c.audio);
   });
   prevBtn.addEventListener('click', () => {
     stopAudio();
     idx = (idx - 1 + cards.length) % cards.length;
     showBack = false;
     renderCard();
+    // autoplay previous card at normal speed
+    slowNext = false;
+    const c = cards[idx];
+    if (c.audio) playAudio(c.audio);
   });
 
   // keyboard (desktop convenience)
