@@ -85,6 +85,15 @@ function initDeckPicker() {
   });
 })();
 
+// Safe text -> HTML
+function escapeHTML(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c =>
+    ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])
+  );
+}
+
+
 /* ---- Router ---- */
 const routes = {
   home: renderHome,
@@ -197,6 +206,293 @@ function initMobileMenu() {
     a.addEventListener('click', () => side.classList.remove('open'))
   );
 }
+
+/* ========= Dashboard helpers ========= */
+
+// Local attempts (shared with Test Mode)
+const LS_ATTEMPTS_KEY = 'tm_attempts_v1';
+const SCORE_WINDOW = 10;
+
+function loadAttemptsMap() {
+  try { return JSON.parse(localStorage.getItem(LS_ATTEMPTS_KEY) || '{}'); }
+  catch { return {}; }
+}
+function lastNAccuracy(cardId, n = SCORE_WINDOW, map = loadAttemptsMap()) {
+  const arr = (map[cardId] || []).slice(0, n);
+  if (!arr.length) return 0;
+  const p = arr.filter(a => a.pass).length;
+  return Math.round((p / arr.length) * 100);
+}
+function categoryFromPct(pct) {
+  if (pct < 50) return 'Struggling';
+  if (pct < 80) return 'Needs review';
+  return 'Mastered';
+}
+function dailyNewCount(struggling, maxDaily = 5) {
+  if (struggling >= 15) return 0;
+  // throttle: 6–10 → 3, 11–14 → 2, <=5 → 5
+  if (struggling >= 11) return Math.min(2, maxDaily);
+  if (struggling >= 6)  return Math.min(3, maxDaily);
+  return Math.min(5, maxDaily);
+}
+
+// Tiny CSV loader (local file)
+async function loadDeckRows(deckId) {
+  const res = await fetch('data/welsh_basics.csv');
+  if (!res.ok) throw new Error('Failed to load deck CSV');
+  const text = await res.text();
+  const lines = text.trim().split(/\r?\n/);
+  const headers = lines.shift().split(',');
+  const rows = lines.filter(l => l.trim().length).map(line => {
+    const values = line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
+    const obj = {};
+    headers.forEach((h, i) => { obj[h.trim()] = (values[i] || '').replace(/^"|"$/g, '').trim(); });
+    return obj;
+  });
+  return rows.map(r => ({
+    id: r.id || '',
+    front: r.front || r.word || '',
+    back:  r.back  || r.translation || '',
+    tags:  r.tags || '',
+  })).filter(r => r.id && r.front);
+}
+
+// Hue (red→green) from 0–100%
+function accuracyHue(pct) {
+  const clamped = Math.max(0, Math.min(100, pct));
+  // 0 → red(0), 100 → green(120)
+  return Math.round((clamped / 100) * 120);
+}
+
+/* ========= NEW Home (Dashboard) ========= */
+
+async function renderHome() {
+  const deckId = STATE.activeDeckId;
+  const active = DECKS.find(d => d.id === deckId);
+
+  // Shell
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <h1 class="h1">Dashboard</h1>
+    <div class="muted" style="margin-bottom:8px;">Active deck: <strong>${active.name}</strong></div>
+
+    <!-- CTA / Hero -->
+    <section class="card cta-card">
+      <div class="cta-left">
+        <div class="cta-title" id="cta-title">Welcome back</div>
+        <div class="cta-sub muted" id="cta-sub">Let’s keep the streak alive.</div>
+      </div>
+      <div class="cta-right">
+        <button class="btn primary" id="cta-btn">Start</button>
+      </div>
+    </section>
+
+    <!-- Stat cards -->
+    <section class="stats-grid dashboard">
+      <div class="card stat" id="stat-review">
+        <div class="title">Due for Review</div>
+        <div class="big" id="stat-review-num">—</div>
+        <button class="btn" id="btn-review">Review Now</button>
+      </div>
+
+      <div class="card stat" id="stat-new">
+        <div class="title">New Phrases Today</div>
+        <div class="big" id="stat-new-num">—</div>
+        <button class="btn" id="btn-new">Start New</button>
+      </div>
+
+      <div class="card stat" id="stat-test">
+        <div class="title">Test Queue</div>
+        <div class="big" id="stat-test-num">—</div>
+        <button class="btn" id="btn-test">Start Test</button>
+      </div>
+    </section>
+
+    <!-- Attention chips -->
+    <section class="card chips-card">
+      <div class="chips-title">What needs your attention</div>
+      <div class="chips" id="chips"></div>
+    </section>
+
+    <!-- Progress table -->
+    <section class="card table-card">
+      <div class="table-head">
+        <div class="table-title">Progress</div>
+        <div class="filters">
+          <button class="pill" data-filter="all"  aria-pressed="true">All</button>
+          <button class="pill" data-filter="Struggling">Struggling</button>
+          <button class="pill" data-filter="Needs review">Needs review</button>
+          <button class="pill" data-filter="Mastered">Mastered</button>
+          <input class="search" id="searchBox" placeholder="Search…" />
+        </div>
+      </div>
+      <div class="table-wrap">
+        <table class="data" id="progressTable">
+          <thead>
+            <tr>
+              <th>Phrase (Welsh)</th>
+              <th>Meaning</th>
+              <th>Status</th>
+              <th>Accuracy (last ${SCORE_WINDOW})</th>
+              <th>Last attempts</th>
+              <th>Tags</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="progressBody">
+            <tr><td colspan="7" class="muted">Loading…</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+  `;
+
+  // Wire static buttons
+  wrap.querySelector('#btn-review').addEventListener('click', () => location.hash = '#/review');
+  wrap.querySelector('#btn-new').addEventListener('click', () => location.hash = '#/newPhrase');
+  wrap.querySelector('#btn-test').addEventListener('click', () => location.hash = '#/test');
+
+  // Load data
+  const attempts = loadAttemptsMap();
+  const rows = await loadDeckRows(deckId);
+
+  // Derive per-card metrics
+  const enriched = rows.map(r => {
+    const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
+    const status = categoryFromPct(acc);
+    const lastCount = (attempts[r.id] || []).slice(0, SCORE_WINDOW).length;
+    return { ...r, acc, status, lastCount };
+  });
+
+  // Counts
+  const strugglingCount = enriched.filter(x => x.status === 'Struggling').length;
+  const needsCount      = enriched.filter(x => x.status === 'Needs review').length;
+  const masteredCount   = enriched.filter(x => x.status === 'Mastered').length;
+
+  const reviewDue = strugglingCount + needsCount; // could add spaced-boost for mastered later
+  const newToday  = dailyNewCount(strugglingCount);
+  const testCount = strugglingCount + Math.ceil(needsCount * 0.3); // simple heuristic
+
+  // Fill stat cards
+  wrap.querySelector('#stat-review-num').textContent = reviewDue;
+  wrap.querySelector('#stat-new-num').textContent    = newToday;
+  wrap.querySelector('#stat-test-num').textContent   = testCount;
+
+  // Color accents by “goodness”
+  colorStatCard(wrap.querySelector('#stat-review'), 100 - Math.min(100, reviewDue * 8)); // fewer due → greener
+  colorStatCard(wrap.querySelector('#stat-new'), newToday ? 80 : 30);
+  colorStatCard(wrap.querySelector('#stat-test'), Math.max(30, 100 - strugglingCount * 6));
+
+  // CTA logic
+  const ctaTitle = wrap.querySelector('#cta-title');
+  const ctaSub   = wrap.querySelector('#cta-sub');
+  const ctaBtn   = wrap.querySelector('#cta-btn');
+
+  if (strugglingCount >= 15 && reviewDue > 0) {
+    ctaTitle.textContent = `🔁 ${reviewDue} due for review`;
+    ctaSub.textContent   = `You’re juggling ${strugglingCount} struggling items. Let’s stabilise these first.`;
+    ctaBtn.textContent   = 'Review now';
+    ctaBtn.onclick = () => location.hash = '#/review';
+  } else if (newToday > 0) {
+    ctaTitle.textContent = `🌱 ${newToday} New Phrase${newToday>1?'s':''} ready`;
+    ctaSub.textContent   = `Struggling: ${strugglingCount}. We’ll pace new items accordingly.`;
+    ctaBtn.textContent   = 'Start new';
+    ctaBtn.onclick = () => location.hash = '#/newPhrase';
+  } else if (reviewDue > 0) {
+    ctaTitle.textContent = `🔁 ${reviewDue} due for review`;
+    ctaSub.textContent   = `Mastered: ${masteredCount}. Keep the momentum.`;
+    ctaBtn.textContent   = 'Review now';
+    ctaBtn.onclick = () => location.hash = '#/review';
+  } else {
+    ctaTitle.textContent = '🧪 Test Mode';
+    ctaSub.textContent   = 'Quick checks keep recall sharp.';
+    ctaBtn.textContent   = 'Start test';
+    ctaBtn.onclick = () => location.hash = '#/test';
+  }
+
+  // Attention chips (top 6 hardest by accuracy, then recent failures if you track timestamps)
+  const chipsBox = wrap.querySelector('#chips');
+  chipsBox.innerHTML = '';
+  enriched
+    .sort((a,b) => a.acc - b.acc)
+    .slice(0, 6)
+    .forEach(c => {
+      const pill = document.createElement('button');
+      pill.className = 'chip ' + (c.acc < 50 ? 'bad' : c.acc < 80 ? 'warn' : 'good');
+      pill.textContent = `${c.front} • ${c.acc}%`;
+      pill.title = c.back;
+      pill.addEventListener('click', () => {
+        // jump to Test Mode focusing this card (future: pass id via hash if you like)
+        location.hash = '#/test';
+      });
+      chipsBox.appendChild(pill);
+    });
+
+  // Progress table
+  const tbody = wrap.querySelector('#progressBody');
+  const renderRows = (filter = 'all', q = '') => {
+    const qlc = q.trim().toLowerCase();
+    const list = enriched.filter(r => {
+      const matchFilter = (filter === 'all') || (r.status === filter);
+      const matchQ = !qlc || r.front.toLowerCase().includes(qlc) || r.back.toLowerCase().includes(qlc);
+      return matchFilter && matchQ;
+    });
+    tbody.innerHTML = '';
+    if (!list.length) {
+      tbody.innerHTML = `<tr><td colspan="7" class="muted">No results.</td></tr>`;
+      return;
+    }
+    list.forEach(r => {
+      const tr = document.createElement('tr');
+      const hue = accuracyHue(r.acc);
+      tr.innerHTML = `
+        <td class="w">${escapeHTML(r.front)}</td>
+        <td class="e muted">${escapeHTML(r.back)}</td>
+        <td><span class="status ${r.status.replace(/\s/g,'-').toLowerCase()}">${r.status}</span></td>
+        <td>
+          <div class="acc">
+            <span>${r.acc}%</span>
+            <div class="bar"><span style="width:${r.acc}%; background:hsl(${hue} 70% 45%);"></span></div>
+          </div>
+        </td>
+        <td>${r.lastCount}</td>
+        <td>${escapeHTML(r.tags)}</td>
+        <td class="actions">
+          <button class="btn xs" data-act="study">Study</button>
+          <button class="btn xs" data-act="test">Test</button>
+        </td>
+      `;
+      tr.querySelector('[data-act="study"]').addEventListener('click', () => location.hash = '#/review');
+      tr.querySelector('[data-act="test"]').addEventListener('click',  () => location.hash = '#/test');
+      tbody.appendChild(tr);
+    });
+  };
+
+  // Filter + search
+  let currentFilter = 'all';
+  wrap.querySelectorAll('.filters .pill').forEach(btn => {
+    btn.addEventListener('click', () => {
+      wrap.querySelectorAll('.filters .pill').forEach(b => b.setAttribute('aria-pressed', 'false'));
+      btn.setAttribute('aria-pressed', 'true');
+      currentFilter = btn.dataset.filter;
+      renderRows(currentFilter, wrap.querySelector('#searchBox').value || '');
+    });
+  });
+  wrap.querySelector('#searchBox').addEventListener('input', (e) => {
+    renderRows(currentFilter, e.target.value || '');
+  });
+
+  renderRows(); // first paint
+
+  return wrap;
+}
+
+// helper to tint stat cards
+function colorStatCard(el, goodnessPct = 50) {
+  const hue = accuracyHue(goodnessPct);
+  el.style.boxShadow = `0 0 0 1px rgba(255,255,255,0.06), 0 0 0 3px hsl(${hue} 70% 25% / .25) inset`;
+}
+
 
 /* ---- Boot ---- */
 window.addEventListener('DOMContentLoaded', () => {
