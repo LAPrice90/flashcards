@@ -16,6 +16,10 @@
 
 
 /* Stacked flashcard layout with dark theme colors */
+.card--center {
+  display: flex;
+  justify-content: center;
+}
 .flashcard {
   width: 100%;
   max-width: 560px;
@@ -104,5 +108,11 @@
 @media (max-width: 920px) {
   .flashcard { max-width: 100%; padding: 14px; }
   .flashcard-image { aspect-ratio: 1 / 1; }
-  .flashcard-text .term { font-size: 22px; }
+  .flashcard-text .term,
+  .flashcard-text .translation { font-size: 22px; }
+}
+
+/* iPhone 13 Pro scale */
+@media (max-width: 430px) {
+  .flashcard { max-width: 390px; }
 }
