@@ -214,6 +214,19 @@ const prevBtn = wrap.querySelector('#prevBtn');
 const audioBtn = wrap.querySelector('#audioBtn');
 const nextBtn = wrap.querySelector('#nextBtn');
 
+// audio playback state
+let audio;
+let slowNext = false;
+
+function playAudio() {
+  if (!audio) return;
+  audio.pause();
+  audio.currentTime = 0;
+  audio.playbackRate = slowNext ? 0.8 : 1.0;
+  slowNext = !slowNext;
+  audio.play();
+}
+
 function renderCard() {
   const c = cards[idx];
   // image
@@ -222,7 +235,14 @@ function renderCard() {
     : `<div class="no-image muted">No image</div>`;
   // audio
   audioBtn.style.display = c.audio ? '' : 'none';
-  if (c.audio) new Audio(c.audio).play();
+  if (audio) audio.pause();
+  if (c.audio) {
+    audio = new Audio(c.audio);
+    slowNext = false;
+    playAudio();
+  } else {
+    audio = null;
+  }
   // text
   term.textContent = (mode === 'quiz') ? c.back : c.front;
   trans.textContent = (mode === 'quiz') ? c.front : c.back;
@@ -243,8 +263,7 @@ trans.addEventListener('click', () => {
   term.classList.remove('hidden');
 });
 audioBtn.addEventListener('click', () => {
-  const c = cards[idx];
-  if (c.audio) new Audio(c.audio).play();
+  playAudio();
 });
 nextBtn.addEventListener('click', () => {
   idx = (idx + 1) % cards.length;
