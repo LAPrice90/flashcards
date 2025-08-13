@@ -420,8 +420,12 @@ async function renderHome() {
 
   const reviewDue = strugglingCount + needsCount; // could add spaced-boost for mastered later
   const daily = getDailyNewAllowance(deckId, strugglingCount, unseenCount);
+  // Today's active set: (A) review due, then (B) first N unseen by deck order
+  const reviewList = enriched.filter(x => x.status === 'Struggling' || x.status === 'Needs review');
+  const unseenList = enriched.filter(x => x.status === 'Unseen');
   // TODO: New Phrase Mode will increment `used` when a new card is completed.
-  const newToday  = Math.max(0, (daily.allowed - daily.used));
+  const newToday = Math.max(0, (daily.allowed - daily.used)); // already computed
+  const activeToday = reviewList.concat(unseenList.slice(0, newToday));
   const testCount = strugglingCount + Math.ceil(needsCount * 0.3); // simple heuristic
 
   // Fill stat cards
@@ -464,7 +468,7 @@ async function renderHome() {
   // Attention chips (top 6 hardest by accuracy, then recent failures if you track timestamps)
   const chipsBox = wrap.querySelector('#chips');
   chipsBox.innerHTML = '';
-  enriched
+  activeToday
     .sort((a,b) => a.acc - b.acc)
     .slice(0, 6)
     .forEach(c => {
@@ -481,9 +485,9 @@ async function renderHome() {
 
   // Progress table
   const tbody = wrap.querySelector('#progressBody');
-  const renderRows = (filter = 'all', q = '') => {
+  const renderRows = (filter = 'all', q = '', base = enriched) => {
     const qlc = q.trim().toLowerCase();
-    const list = enriched.filter(r => {
+    const list = base.filter(r => {
       const matchFilter = (filter === 'all') || (r.status === filter);
       const matchQ = !qlc || r.front.toLowerCase().includes(qlc) || r.back.toLowerCase().includes(qlc);
       return matchFilter && matchQ;
@@ -533,7 +537,7 @@ async function renderHome() {
     renderRows(currentFilter, e.target.value || '');
   });
 
-  renderRows(); // first paint
+  renderRows('all', '', activeToday); // first paint
 
   return wrap;
 }
