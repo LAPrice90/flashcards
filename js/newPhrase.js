@@ -151,21 +151,15 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
     return (raw.split('?')[0]||'home');
   }
 
-  async function mountIfLearningRoute(){
-    if(routeName()!=='newPhrase') return;
-
-    document.querySelectorAll('.nav a').forEach(a=>
-      a.classList.toggle('active', a.getAttribute('href') === '#/newPhrase')
-    );
-
-    const host=document.getElementById('view');
+  async function renderNewPhrase(){
+    const host=document.createElement('div');
     host.innerHTML=`<h1 class="h1">New Words</h1>
       <div class="muted" id="np-day-wrap">Day <span id="np-day">1</span></div>
       <section class="card card--center"><div id="np-root" class="flashcard"></div></section>`;
-    viewEl=document.getElementById('np-root');
+    viewEl=host.querySelector('#np-root');
 
     const deckId = dk;
-    document.getElementById('np-day').textContent=currentDay(deckId);
+    host.querySelector('#np-day').textContent=currentDay(deckId);
 
     (function migrateDailyIfNeeded(){
       const canonical = dailyKey;
@@ -194,6 +188,7 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
       console.error(e);
       viewEl.innerHTML=`<div class="muted">Failed to load data.</div>`;
     }
+    return host;
   }
 
   function current(){ return queue[idx]; }
@@ -388,8 +383,7 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
   }
 
   /* ---------- Boot ---------- */
-  window.addEventListener('DOMContentLoaded', mountIfLearningRoute);
-  window.addEventListener('hashchange', mountIfLearningRoute);
+  window.renderNewPhrase = renderNewPhrase;
 
   // small style tweaks (reuse flashcard look)
   const style=document.createElement('style');
