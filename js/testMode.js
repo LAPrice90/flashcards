@@ -1,22 +1,76 @@
 function deckKeyFromState() {
-  // Prefer the JSON filename stem already used by the fetch; fall back to STATE.activeDeckId.
-  // Known mapping for now:
   const map = {
     'Welsh – A1 Phrases': 'welsh_phrases_A1',
     'Welsh - A1 Phrases': 'welsh_phrases_A1',
     'welsh_a1': 'welsh_phrases_A1'
   };
-  const id = (STATE && STATE.activeDeckId) || '';
+  const id = (window.STATE && STATE.activeDeckId) || '';
   return map[id] || id || 'welsh_phrases_A1';
+}
+
+const dk          = deckKeyFromState();
+const progressKey = 'progress_' + dk;          // read/write here
+const dailyKey    = 'np_daily_' + dk;          // read in Test/Study; read/write in New Phrases
+const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchanged)
+
+(function migrateProgressIfNeeded(){
+  const legacy = 'progress_' + ((window.STATE && STATE.activeDeckId) || '');
+  if (legacy !== progressKey) {
+    const legacyVal = localStorage.getItem(legacy);
+    if (legacyVal && !localStorage.getItem(progressKey)) {
+      localStorage.setItem(progressKey, legacyVal);
+    }
+  }
+})();
+
+async function loadDeckSorted(){
+  const res = await fetch(`data/${dk}.json`, { cache: 'no-cache' });
+  const data = await res.json();
+  const rows = Array.isArray(data) ? data : (data.cards || data);
+  const mapRow = (r,i) => ({
+    id: r.id || r.card || `row_${i+1}`,
+    front: r.welsh || r.Welsh || r.front || r.cy || '',
+    back:  r.english || r.English || r.back || r.en || '',
+    unit:  r.unit || '', section: r.section || '',
+    card:  Number.isFinite(+r.card) ? +r.card : (i+1),
+  });
+  const list = rows.map(mapRow).filter(x => x.id && x.front && x.back);
+  list.sort((a,b)=>{
+    const u = String(a.unit).localeCompare(String(b.unit)); if (u) return u;
+    const s = String(a.section).localeCompare(String(b.section)); if (s) return s;
+    const c = (a.card||0) - (b.card||0); if (c) return c;
+    return String(a.id).localeCompare(String(b.id));
+  });
+  return list;
+}
+
+function loadProgressSeen(){
+  try { return (JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}').seen) || {}; }
+  catch { return {}; }
+}
+
+function loadAttempts(){
+  try { return JSON.parse(localStorage.getItem(attemptsKey) || '{}'); }
+  catch { return {}; }
+}
+
+function isActiveCard(id, seen, attempts){
+  return !!(seen[id] || (attempts[id] && attempts[id].length));
+}
+
+function logAttempt(cardId, pass){
+  const obj = loadAttempts();
+  const arr = obj[cardId] || [];
+  arr.push({ ts: Date.now(), pass: !!pass });
+  obj[cardId] = arr;
+  localStorage.setItem(attemptsKey, JSON.stringify(obj));
 }
 
 // Test Mode – review only. Route: #/test
 
 (() => {
   /* ---------- Constants & state ---------- */
-  const LS_ATTEMPTS_KEY = 'tm_attempts_v1';
   const LS_START_KEY = 'tm_start_date';
-  const MAX_HISTORY = 50;
 
   let container = null;
   let deck = [];
@@ -94,20 +148,6 @@ function deckKeyFromState() {
   const escapeHTML = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   function focusField(sel){ const el = container?.querySelector(sel); if(el){ el.focus(); el.select?.(); }}
 
-  /* ---------- Attempt storage ---------- */
-  function loadAttempts() {
-    try { return JSON.parse(localStorage.getItem(LS_ATTEMPTS_KEY) || '{}'); }
-    catch { return {}; }
-  }
-  const attemptsMap = loadAttempts();
-  function saveAttempts() { localStorage.setItem(LS_ATTEMPTS_KEY, JSON.stringify(attemptsMap)); }
-  function pushAttempt(id, pass) {
-    if (!attemptsMap[id]) attemptsMap[id] = [];
-    attemptsMap[id].unshift({ ts: new Date().toISOString(), pass: !!pass });
-    if (attemptsMap[id].length > MAX_HISTORY) attemptsMap[id].length = MAX_HISTORY;
-    saveAttempts();
-  }
-
   /* ---------- Prevent global hotkeys inside inputs ---------- */
   window.addEventListener('keydown', e => {
     if (e.target && (e.target.matches('input, textarea') || e.target.isContentEditable)) {
@@ -116,19 +156,13 @@ function deckKeyFromState() {
   }, true);
 
   /* ---------- Data loading ---------- */
-  async function loadActiveCards() {
-    const deckId = deckKeyFromState();
-    const [rows, prog] = await Promise.all([
-      loadDeckRows(deckId),
-      loadProgress(deckId)
-    ]);
-    const active = rows.filter(r => (prog.seen || {})[r.id]);
-    active.sort((a, b) =>
-      String(a.unit).localeCompare(String(b.unit)) ||
-      String(a.section).localeCompare(String(b.section)) ||
-      String(a.card).localeCompare(String(b.card)) ||
-      String(a.id).localeCompare(String(b.id))
-    );
+  async function buildActiveDeck() {
+    const deck = await loadDeckSorted();
+    const seen = loadProgressSeen();
+    const attempts = loadAttempts();
+    const active = deck.filter(c => isActiveCard(c.id, seen, attempts));
+    console.log('[active-count]', deckKeyFromState(), active.length);
+    console.log('[progress-key-used]', progressKey);
     return active;
   }
 
@@ -159,7 +193,7 @@ function deckKeyFromState() {
     const c = deck[idx];
     const val = container.querySelector('#tm-answer').value || '';
     const pass = !skip && equalsLoose(val, c.front);
-    pushAttempt(c.id, pass);
+    logAttempt(c.id, pass);
     if (pass) correct++; else { wrong.push(c); }
     showResult(pass, val);
   }
@@ -212,9 +246,9 @@ function deckKeyFromState() {
   async function start() {
     container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">Loading…</div></div>`;
     try {
-      const active = await loadActiveCards();
+      const active = await buildActiveDeck();
       if (!active.length) {
-        container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">No introduced cards to test.</div></div>`;
+        container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">No introduced cards. Use New Phrases first.</div></div>`;
         return;
       }
       deck = shuffle(active);
