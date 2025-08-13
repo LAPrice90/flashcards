@@ -219,7 +219,22 @@ function initMobileMenu() {
 
 // Local attempts (shared with Test Mode)
 const LS_ATTEMPTS_KEY = 'tm_attempts_v1';
+const LS_NEW_DAILY_PREFIX = 'np_daily_';
 const SCORE_WINDOW = 10;
+
+function todayKey(){
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth()+1).padStart(2,'0');
+  const day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function loadNewDaily(deckId){
+  try{ return JSON.parse(localStorage.getItem(LS_NEW_DAILY_PREFIX+deckId) || '{}'); }catch{ return {}; }
+}
+function saveNewDaily(deckId,obj){
+  localStorage.setItem(LS_NEW_DAILY_PREFIX+deckId, JSON.stringify(obj));
+}
 
 function loadAttemptsMap() {
   try { return JSON.parse(localStorage.getItem(LS_ATTEMPTS_KEY) || '{}'); }
@@ -242,6 +257,21 @@ function dailyNewCount(struggling, maxDaily = 5) {
   if (struggling >= 11) return Math.min(2, maxDaily);
   if (struggling >= 6)  return Math.min(3, maxDaily);
   return Math.min(5, maxDaily);
+}
+
+function getDailyNewAllowance(deckId, strugglingCount, unseenCount){
+  const key = todayKey();
+  const st = loadNewDaily(deckId);
+  if (st.date !== key) {
+    const allowed = dailyNewCount(strugglingCount); // uses your existing 15-rule
+    const cap = Math.min(allowed, unseenCount);
+    const fresh = { date:key, allowed:cap, used:0 };
+    saveNewDaily(deckId, fresh);
+    return fresh;
+  }
+  // same day: don’t exceed original allowance
+  const allowed = Math.min(st.allowed ?? 0, unseenCount);
+  return { date:key, allowed, used: st.used ?? 0 };
 }
 
 // Tiny JSON loader (local file)
@@ -380,7 +410,9 @@ async function renderHome() {
   const masteredCount   = enriched.filter(x => x.status === 'Mastered').length;
 
   const reviewDue = strugglingCount + needsCount; // could add spaced-boost for mastered later
-  const newToday  = unseenCount > 0 ? 5 : 0; // TODO: replace with 15-rule once progress tracking is added
+  const daily = getDailyNewAllowance(deckId, strugglingCount, unseenCount);
+  // TODO: New Phrase Mode will increment `used` when a new card is completed.
+  const newToday  = Math.max(0, (daily.allowed - daily.used));
   const testCount = strugglingCount + Math.ceil(needsCount * 0.3); // simple heuristic
 
   // Fill stat cards
