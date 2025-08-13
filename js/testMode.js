@@ -1,57 +1,57 @@
-function deckKeyFromState() {
-  const map = {
-    'Welsh – A1 Phrases': 'welsh_phrases_A1',
-    'Welsh - A1 Phrases': 'welsh_phrases_A1',
-    'welsh_a1': 'welsh_phrases_A1'
-  };
-  const id = (window.STATE && STATE.activeDeckId) || '';
-  return map[id] || id || 'welsh_phrases_A1';
-}
-
-const dk          = deckKeyFromState();
-const progressKey = 'progress_' + dk;          // read/write here
-const dailyKey    = 'np_daily_' + dk;          // read in Test/Study; read/write in New Phrases
-const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchanged)
-
-(function migrateProgressIfNeeded(){
-  const legacy = 'progress_' + ((window.STATE && STATE.activeDeckId) || '');
-  if (legacy !== progressKey) {
-    const legacyVal = localStorage.getItem(legacy);
-    if (legacyVal && !localStorage.getItem(progressKey)) {
-      localStorage.setItem(progressKey, legacyVal);
-    }
+(function(){
+  function deckKeyFromState() {
+    const map = {
+      'Welsh – A1 Phrases': 'welsh_phrases_A1',
+      'Welsh - A1 Phrases': 'welsh_phrases_A1',
+      'welsh_a1': 'welsh_phrases_A1'
+    };
+    const id = (window.STATE && STATE.activeDeckId) || '';
+    return map[id] || id || 'welsh_phrases_A1';
   }
-})();
 
-async function loadDeckSorted(deckId){
-  return await loadDeckRows(deckId || dk);
-}
+  const dk          = deckKeyFromState();
+  const progressKey = 'progress_' + dk;          // read/write here
+  const dailyKey    = 'np_daily_' + dk;          // read in Test/Study; read/write in New Phrases
+  const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchanged)
 
-function loadProgressSeen(){
-  try { return (JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}').seen) || {}; }
-  catch { return {}; }
-}
+  (function migrateProgressIfNeeded(){
+    const legacy = 'progress_' + ((window.STATE && STATE.activeDeckId) || '');
+    if (legacy !== progressKey) {
+      const legacyVal = localStorage.getItem(legacy);
+      if (legacyVal && !localStorage.getItem(progressKey)) {
+        localStorage.setItem(progressKey, legacyVal);
+      }
+    }
+  })();
 
-function loadAttempts(){
-  try { return JSON.parse(localStorage.getItem(attemptsKey) || '{}'); }
-  catch { return {}; }
-}
+  async function loadDeckSorted(deckId){
+    return await loadDeckRows(deckId || dk);
+  }
 
-function isActiveCard(id, seen, attempts){
-  return !!(seen[id] || (attempts[id] && attempts[id].length));
-}
+  function loadProgressSeen(){
+    try { return (JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}').seen) || {}; }
+    catch { return {}; }
+  }
 
-function logAttempt(cardId, pass){
-  const obj = loadAttempts();
-  const arr = obj[cardId] || [];
-  arr.push({ ts: Date.now(), pass: !!pass });
-  obj[cardId] = arr;
-  localStorage.setItem(attemptsKey, JSON.stringify(obj));
-}
+  function loadAttempts(){
+    try { return JSON.parse(localStorage.getItem(attemptsKey) || '{}'); }
+    catch { return {}; }
+  }
 
-// Test Mode – review only. Route: #/test
+  function isActiveCard(id, seen, attempts){
+    return !!(seen[id] || (attempts[id] && attempts[id].length));
+  }
 
-(() => {
+  function logAttempt(cardId, pass){
+    const obj = loadAttempts();
+    const arr = obj[cardId] || [];
+    arr.push({ ts: Date.now(), pass: !!pass });
+    obj[cardId] = arr;
+    localStorage.setItem(attemptsKey, JSON.stringify(obj));
+  }
+
+  // Test Mode – review only. Route: #/test
+
   /* ---------- Constants & state ---------- */
   const LS_START_KEY = 'tm_start_date';
 
