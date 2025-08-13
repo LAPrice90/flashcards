@@ -23,35 +23,8 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
   }
 })();
 
-async function loadDeckSorted(){
-  const res = await fetch(`data/${dk}.json`, { cache: 'no-cache' });
-  const data = await res.json();
-  const rows = Array.isArray(data) ? data : (data.cards || data);
-  const mapRow = (r,i) => ({
-    id: r.id || r.card || `row_${i+1}`,
-    front: r.welsh || r.Welsh || r.front || r.cy || '',
-    back:  r.english || r.English || r.back || r.en || '',
-    unit:  r.unit || '', section: r.section || '',
-    card:  Number.isFinite(+r.card) ? +r.card : (i+1),
-    image: r.image || '',
-    audio: r.audio || '',
-    phonetic: r.pronunciation || r.phonetic || '',
-    example: r.example || '',
-    usage_note: r.usage_note || r.use || '',
-    word_breakdown: r.word_breakdown || r.grammar_notes || '',
-    pattern_examples: r.pattern_examples || '',
-    pattern_examples_en: r.pattern_examples_en || '',
-    slow_audio: r.slow_audio || '',
-    tags: r.tags || ''
-  });
-  const list = rows.map(mapRow).filter(x => x.id && x.front && x.back);
-  list.sort((a,b)=>{
-    const u = String(a.unit).localeCompare(String(b.unit)); if (u) return u;
-    const s = String(a.section).localeCompare(String(b.section)); if (s) return s;
-    const c = (a.card||0) - (b.card||0); if (c) return c;
-    return String(a.id).localeCompare(String(b.id));
-  });
-  return list;
+async function loadDeckSorted(deckId){
+  return await loadDeckRows(deckId || dk);
 }
 
 function loadProgressSeen(){
@@ -84,7 +57,7 @@ async function renderReview(query) {
 
   const dk = deckKeyFromState();
   const activeDeck = DECKS.find(d => d.id === dk);
-  const deck = await loadDeckSorted();
+  const deck = await loadDeckSorted(dk);
   const seen = loadProgressSeen();
   const attempts = loadAttempts();
   const cards = deck.filter(c => isActiveCard(c.id, seen, attempts));
