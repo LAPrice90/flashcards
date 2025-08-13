@@ -69,7 +69,7 @@
 
   // ---------- CSV ----------
   async function fetchDeckCSV() {
-    const res = await fetch('data/welsh_basics.csv');
+    const res = await fetch('data/welsh_phrases_A1.csv');
     if (!res.ok) throw new Error('Failed to load CSV');
     const text = await res.text();
     const lines = text.trim().split(/\r?\n/);
@@ -83,9 +83,12 @@
       return obj;
     });
     return rows.map(r => ({
+      card: r.card || '',
+      unit: r.unit || '',
+      section: r.section || '',
       id: r.id || '',
-      front: r.front || r.word || '',       // Welsh
-      back:  r.back  || r.translation || '',// English
+      front: r.welsh || r.front || r.word || '',       // Welsh
+      back:  r.english || r.back  || r.translation || '',// English
       audio: r.audio || ''                  // optional audio file
     })).filter(r => r.id && r.front && r.back);
   }
