@@ -16,6 +16,18 @@ const LS_NEW_DAILY_PREFIX = 'np_daily_';
 const LS_ATTEMPTS_KEY = 'tm_attempts_v1';
 const SCORE_WINDOW = 10;
 
+function deckKeyFromState() {
+  // Prefer the JSON filename stem already used by the fetch; fall back to STATE.activeDeckId.
+  // Known mapping for now:
+  const map = {
+    'Welsh – A1 Phrases': 'welsh_phrases_A1',
+    'Welsh - A1 Phrases': 'welsh_phrases_A1',
+    'welsh_a1': 'welsh_phrases_A1'
+  };
+  const id = (STATE && STATE.activeDeckId) || '';
+  return map[id] || id || 'welsh_phrases_A1';
+}
+
 const STATE = {
   activeDeckId: loadActiveDeckId(),
   viewMode: loadViewMode(),
@@ -121,7 +133,7 @@ function parseHash() {
 
 /* ---------- Mobile menu ---------- */
 function initMobileMenu() {
-  const btn = document.querySelector('.menu-btn');
+  const btn = document.getElementById('menuToggle');
   const side = document.querySelector('.side');
   if (!btn || !side) return;
   btn.addEventListener('click', () => side.classList.toggle('open'));
@@ -136,18 +148,26 @@ function todayKey() {
   return d.toISOString().slice(0,10);
 }
 function loadProgress(deckId){
-  try{ return JSON.parse(localStorage.getItem(LS_PROGRESS_PREFIX+deckId) || '{}'); }
+  const dk = deckId || deckKeyFromState();
+  const progressKey = LS_PROGRESS_PREFIX + dk;
+  try{ return JSON.parse(localStorage.getItem(progressKey) || '{}'); }
   catch { return {}; }
 }
 function saveProgress(deckId,obj){
-  localStorage.setItem(LS_PROGRESS_PREFIX+deckId, JSON.stringify(obj));
+  const dk = deckId || deckKeyFromState();
+  const progressKey = LS_PROGRESS_PREFIX + dk;
+  localStorage.setItem(progressKey, JSON.stringify(obj));
 }
 function loadNewDaily(deckId){
-  try{ return JSON.parse(localStorage.getItem(LS_NEW_DAILY_PREFIX+deckId) || '{}'); }
+  const dk = deckId || deckKeyFromState();
+  const dailyKey = LS_NEW_DAILY_PREFIX + dk;
+  try{ return JSON.parse(localStorage.getItem(dailyKey) || '{}'); }
   catch { return {}; }
 }
 function saveNewDaily(deckId,obj){
-  localStorage.setItem(LS_NEW_DAILY_PREFIX+deckId, JSON.stringify(obj));
+  const dk = deckId || deckKeyFromState();
+  const dailyKey = LS_NEW_DAILY_PREFIX + dk;
+  localStorage.setItem(dailyKey, JSON.stringify(obj));
 }
 function loadAttemptsMap(){
   try{ return JSON.parse(localStorage.getItem(LS_ATTEMPTS_KEY) || '{}'); }
@@ -179,7 +199,8 @@ function currentDay(deckId){
   return diff+1;
 }
 async function loadDeckRows(deckId){
-  const res = await fetch(`data/${deckId}.json`);
+  const dk = deckKeyFromState();
+  const res = await fetch(`data/${dk}.json`, { cache: 'no-cache' });
   if(!res.ok) throw new Error('Failed to load deck JSON');
   const data = await res.json();
   const rows = Object.values(data.by_status||{}).flat();
@@ -244,8 +265,21 @@ function renderPlaceholder(title){
 
 /* ========= Dashboard ========= */
 async function renderHome(){
-  const deckId = STATE.activeDeckId;
+  const dk = deckKeyFromState();
+  const deckId = dk;
   const active = DECKS.find(d=>d.id===deckId);
+  const dailyKey = 'np_daily_' + dk;
+  const progressKey = 'progress_' + dk;
+
+  (function migrateDailyIfNeeded(){
+    const canonical = dailyKey;
+    const legacy    = 'np_daily_' + ((STATE && STATE.activeDeckId) || '');
+    if (canonical !== legacy) {
+      const legacyVal = localStorage.getItem(legacy);
+      const nothing = localStorage.getItem(canonical);
+      if (legacyVal && !nothing) localStorage.setItem(canonical, legacyVal);
+    }
+  })();
 
   const wrap=document.createElement('div');
   wrap.innerHTML = `
@@ -320,7 +354,7 @@ async function renderHome(){
   const prog = loadProgress(deckId);
   const seenIds = new Set(Object.keys(prog.seen||{}));
   const activeRows = rows.filter(r=>seenIds.has(r.id));
-  const unseenCount = rows.length - activeRows.length;
+  const unseenCount = rows.filter(r=>!seenIds.has(r.id) && !(attempts[r.id]||[]).length).length;
 
   const enriched = activeRows.map(r=>{
     const arr = attempts[r.id] || [];
@@ -338,8 +372,10 @@ async function renderHome(){
   const masteredCount = enriched.filter(x=>x.status==='Mastered').length;
   const reviewDue = strugglingCount + needsCount;
   const allMastered = enriched.length > 0 && reviewDue === 0;
-  const daily = getDailyNewAllowance(deckId, unseenCount, allMastered);
-  const newToday = Math.max(0, (daily.allowed - daily.used));
+  getDailyNewAllowance(deckId, unseenCount, allMastered);
+  const daily = JSON.parse(localStorage.getItem(dailyKey) || '{}');
+  const newToday = Math.max(0, (daily.allowed || 0) - (daily.used || 0));
+  console.log('[daily]', deckKeyFromState(), daily);
   const reviewList = enriched.filter(x=>x.status==='Struggling' || x.status==='Needs review');
   const activeToday = reviewList.slice(0, newToday ? newToday : reviewList.length);
   const testCount = strugglingCount + Math.ceil(needsCount * 0.3);

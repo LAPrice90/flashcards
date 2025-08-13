@@ -1,3 +1,15 @@
+function deckKeyFromState() {
+  // Prefer the JSON filename stem already used by the fetch; fall back to STATE.activeDeckId.
+  // Known mapping for now:
+  const map = {
+    'Welsh – A1 Phrases': 'welsh_phrases_A1',
+    'Welsh - A1 Phrases': 'welsh_phrases_A1',
+    'welsh_a1': 'welsh_phrases_A1'
+  };
+  const id = (STATE && STATE.activeDeckId) || '';
+  return map[id] || id || 'welsh_phrases_A1';
+}
+
 // Test Mode – review only. Route: #/test
 
 (() => {
@@ -105,7 +117,7 @@
 
   /* ---------- Data loading ---------- */
   async function loadActiveCards() {
-    const deckId = STATE.activeDeckId;
+    const deckId = deckKeyFromState();
     const [rows, prog] = await Promise.all([
       loadDeckRows(deckId),
       loadProgress(deckId)
