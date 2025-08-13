@@ -5,8 +5,8 @@
    Single-button fast/slow audio
    =========================== */
 
-// Updated to use the new data file `welsh_phrases_A1.csv` which includes
-// additional metadata columns and uses `welsh`/`english` headers instead of
+// Updated to use the new data file `welsh_phrases_A1.json` which includes
+// additional metadata and uses `welsh`/`english` headers instead of
 // the previous `front`/`back` pair.
 const DECKS = [
   { id: 'welsh_phrases_A1', name: 'Welsh – A1 Phrases', count: 116 }
@@ -241,25 +241,18 @@ function dailyNewCount(struggling, maxDaily = 5) {
   return Math.min(5, maxDaily);
 }
 
-// Tiny CSV loader (local file)
+// Tiny JSON loader (local file)
 async function loadDeckRows(deckId) {
-  // Load the new deck CSV which includes extra metadata and explicit Welsh/English headers
-  const res = await fetch(`data/${deckId}.csv`);
-  if (!res.ok) throw new Error('Failed to load deck CSV');
-  const text = await res.text();
-  const lines = text.trim().split(/\r?\n/);
-  const headers = lines.shift().split(',');
-  const rows = lines.filter(l => l.trim().length).map(line => {
-    const values = line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
-    const obj = {};
-    headers.forEach((h, i) => { obj[h.trim()] = (values[i] || '').replace(/^"|"$/g, '').trim(); });
-    return obj;
-  });
-  return rows.map(r => ({
+  // Load the deck JSON which includes extra metadata and explicit Welsh/English headers
+  const res = await fetch(`data/${deckId}.json`);
+  if (!res.ok) throw new Error('Failed to load deck JSON');
+  const data = await res.json();
+  const rows = Object.values(data.by_status || {}).flat();
+  return rows.map((r, i) => ({
     card: r.card || '',
     unit: r.unit || '',
     section: r.section || '',
-    id: r.id || '',
+    id: r.id || String(i),
     front: r.welsh || r.front || r.word || '',
     back:  r.english || r.back  || r.translation || '',
     tags:  r.tags || '',

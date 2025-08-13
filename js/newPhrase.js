@@ -61,31 +61,24 @@
     }
   }, true);
 
-  // ---------- CSV loader ----------
-  async function fetchDeckCSV() {
-    const res = await fetch('data/welsh_phrases_A1.csv');
-    if (!res.ok) throw new Error('Failed to load CSV');
-    const text = await res.text();
-    const lines = text.trim().split(/\r?\n/);
-    const headers = lines.shift().split(',');
-    const rows = lines.filter(l => l.trim().length).map(line => {
-      const values = line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
-      const obj = {};
-      headers.forEach((h, i) => obj[h.trim()] = (values[i] || '').replace(/^"|"$/g, '').trim());
-      return obj;
-    });
-    return rows.map(r => ({
+  // ---------- JSON loader ----------
+  async function fetchDeckJSON() {
+    const res = await fetch('data/welsh_phrases_A1.json');
+    if (!res.ok) throw new Error('Failed to load JSON');
+    const data = await res.json();
+    const entries = Object.values(data.by_status || {}).flat();
+    return entries.map((r, i) => ({
       card: r.card || '',
       unit: r.unit || '',
       section: r.section || '',
-      id: r.id || '',
+      id: r.id || String(i),
       front: r.welsh || r.front || r.word || '',
       back:  r.english || r.back  || r.translation || '',
       image: r.image || '',
       audio: r.audio || '',
-      phonetic: r.phonetic || '',
-      word_breakdown: r.word_breakdown || '',
-      usage_note: r.usage_note || '',
+      phonetic: r.pronunciation || r.phonetic || '',
+      word_breakdown: r.word_breakdown || r.grammar_notes || '',
+      usage_note: r.usage_note || r.use || '',
       pattern_examples: r.pattern_examples || '',
       pattern_examples_en: r.pattern_examples_en || '',
       example: r.example || ''
@@ -154,9 +147,9 @@
       <section class="card card--center"><div id="np-root" class="flashcard"></div></section>`;
     viewEl = document.getElementById('np-root');
 
-    // load CSV and pick 5 random for now
+    // load JSON and pick 5 random for now
     try {
-      const all = await fetchDeckCSV();
+      const all = await fetchDeckJSON();
       queue = pick(all, 5);
       idx = 0;
       step = STEPS.INTRO;
