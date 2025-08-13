@@ -5,10 +5,19 @@ async function renderReview(query) {
   if (deckId !== STATE.activeDeckId) setActiveDeck(deckId);
 
   const active = DECKS.find(d => d.id === deckId);
-  const cards = await loadDeckData(deckId);
+  let cards = await loadDeckData(deckId);
+  const attempts = loadAttemptsMap();
+  cards = cards.map(c => {
+    const arr = attempts[c.id] || [];
+    if (!arr.length) return { ...c, status: 'Unseen' };
+    const acc = lastNAccuracy(c.id, SCORE_WINDOW, attempts);
+    return { ...c, status: categoryFromPct(acc) };
+  }).filter(c => c.status === 'Struggling' || c.status === 'Needs review');
+
   if (!cards.length) {
     const err = document.createElement('div');
-    err.innerHTML = `<h1>No cards found for ${active.name}</h1>`;
+    err.innerHTML = `<h1 class="h1">Review <span class="muted">(${active.name})</span></h1>` +
+      `<section class="card card--center">Nothing to review</section>`;
     return err;
   }
 
