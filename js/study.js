@@ -1,11 +1,24 @@
+function deckKeyFromState() {
+  // Prefer the JSON filename stem already used by the fetch; fall back to STATE.activeDeckId.
+  // Known mapping for now:
+  const map = {
+    'Welsh – A1 Phrases': 'welsh_phrases_A1',
+    'Welsh - A1 Phrases': 'welsh_phrases_A1',
+    'welsh_a1': 'welsh_phrases_A1'
+  };
+  const id = (STATE && STATE.activeDeckId) || '';
+  return map[id] || id || 'welsh_phrases_A1';
+}
+
 async function renderReview(query) {
   // We keep 'mode' param but always start with Welsh front in flashcards
   const deckId = query.get('deck') && DECKS.some(d => d.id === query.get('deck'))
     ? query.get('deck') : STATE.activeDeckId;
   if (deckId !== STATE.activeDeckId) setActiveDeck(deckId);
 
-  const active = DECKS.find(d => d.id === deckId);
-  let cards = await loadDeckData(deckId);
+  const dk = deckKeyFromState();
+  const active = DECKS.find(d => d.id === dk);
+  let cards = await loadDeckData(dk);
   const attempts = loadAttemptsMap();
   cards = cards.map(c => {
     const arr = attempts[c.id] || [];
@@ -278,8 +291,9 @@ async function loadDeckData(deckId) {
   try {
     // The JSON now follows the `welsh_phrases_A1.json` structure which groups
     // phrases by status categories.
-    const res = await fetch(`data/${deckId}.json`);
-    if (!res.ok) throw new Error(`Failed to load deck: ${deckId}`);
+    const dk = deckKeyFromState();
+    const res = await fetch(`data/${dk}.json`, { cache: 'no-cache' });
+    if (!res.ok) throw new Error(`Failed to load deck: ${dk}`);
     const data = await res.json();
     const rows = Object.values(data.by_status || {}).flat();
     return rows.map((r, i) => ({

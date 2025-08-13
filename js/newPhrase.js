@@ -1,6 +1,18 @@
+function deckKeyFromState() {
+  // Prefer the JSON filename stem already used by the fetch; fall back to STATE.activeDeckId.
+  // Known mapping for now:
+  const map = {
+    'Welsh – A1 Phrases': 'welsh_phrases_A1',
+    'Welsh - A1 Phrases': 'welsh_phrases_A1',
+    'welsh_a1': 'welsh_phrases_A1'
+  };
+  const id = (STATE && STATE.activeDeckId) || '';
+  return map[id] || id || 'welsh_phrases_A1';
+}
+
 // newPhrase.js — unlock and learn new phrases (route: #/newPhrase)
 // Loads only active phrases, unlocks next items sequentially and limits
-// new unlocks to once per day unless all active phrases are mastered.
+// new unlocks by daily allowance unless all active phrases are mastered.
 
 (() => {
   /* ---------- Utilities ---------- */
@@ -51,21 +63,13 @@
   }, true);
 
   /* ---------- Progress helpers ---------- */
-  const LS_UNLOCK_PREFIX = 'np_unlock_';
-  function loadUnlock(deckId){
-    try{ return JSON.parse(localStorage.getItem(LS_UNLOCK_PREFIX+deckId) || '{}'); }
-    catch{ return {}; }
-  }
-  function saveUnlock(deckId,obj){
-    localStorage.setItem(LS_UNLOCK_PREFIX+deckId, JSON.stringify(obj));
-  }
-  function canUnlock(deckId, allMastered){
+  function canUnlock(allMastered){
     if(allMastered) return true;
-    const st = loadUnlock(deckId);
-    return st.date !== todayKey();
-  }
-  function markUnlock(deckId){
-    saveUnlock(deckId,{date:todayKey()});
+    const dk = deckKeyFromState();
+    const key = 'np_daily_' + dk;
+    const daily = JSON.parse(localStorage.getItem(key) || '{}');
+    console.log('[daily]', deckKeyFromState(), daily);
+    return (daily.used || 0) < (daily.allowed || 0);
   }
 
   function computeAllMastered(deckId, prog){
@@ -137,8 +141,20 @@
       <section class="card card--center"><div id="np-root" class="flashcard"></div></section>`;
     viewEl=document.getElementById('np-root');
 
-    const deckId=STATE.activeDeckId;
+    const deckId = deckKeyFromState();
+    const dailyKey = 'np_daily_' + deckId;
+    const progressKey = 'progress_' + deckId;
     document.getElementById('np-day').textContent=currentDay(deckId);
+
+    (function migrateDailyIfNeeded(){
+      const canonical = dailyKey;
+      const legacy    = 'np_daily_' + ((STATE && STATE.activeDeckId) || '');
+      if (canonical !== legacy) {
+        const legacyVal = localStorage.getItem(legacy);
+        const nothing = localStorage.getItem(canonical);
+        if (legacyVal && !nothing) localStorage.setItem(canonical, legacyVal);
+      }
+    })();
 
     try {
       deckRows = await loadDeckRows(deckId);
@@ -146,6 +162,11 @@
       queue = deckRows.filter(r => (prog.seen||{})[r.id] && ((prog.seen[r.id].seenCount||0)===0));
       idx=0; step=STEPS.INTRO;
       allMastered = computeAllMastered(deckId, prog);
+      const attempts = loadAttemptsMap();
+      const seenIds = new Set(Object.keys(prog.seen||{}));
+      const unseenCount = deckRows.filter(r=>!seenIds.has(r.id) && !(attempts[r.id]||[]).length).length;
+      const daily = getDailyNewAllowance(deckId, unseenCount, allMastered);
+      console.log('[daily]', deckKeyFromState(), daily);
       if(queue.length){ render(); }
       else renderEmpty();
     } catch(e){
@@ -276,7 +297,7 @@
       viewEl.querySelector('#np-submit').addEventListener('click',()=>{
         const ok=equalsLoose(inp.value||'', c.front);
         if(ok){
-          const deckId=STATE.activeDeckId; const pk=todayKey();
+          const deckId=deckKeyFromState(); const pk=todayKey();
           const prog=loadProgress(deckId); if(!prog.seen) prog.seen={};
           const entry=prog.seen[c.id] || {firstSeen:pk, seenCount:0};
           entry.seenCount=(entry.seenCount||0)+1; entry.lastSeen=pk; prog.seen[c.id]=entry;
@@ -303,8 +324,7 @@
   }
 
   function renderEmpty(){
-    const deckId=STATE.activeDeckId;
-    const allow=canUnlock(deckId, allMastered);
+    const allow=canUnlock(allMastered);
     if(allow){
       viewEl.innerHTML=`<div class="flashcard-progress muted" style="margin-bottom:8px;">No active phrases.</div>
         <div class="flashcard-actions"><button class="btn primary" id="np-unlock">Unlock next phrase</button></div>`;
@@ -334,15 +354,19 @@
   }
 
   async function unlockNext(){
-    const deckId=STATE.activeDeckId;
-    const prog=loadProgress(deckId); if(!prog.seen) prog.seen={};
+    const deckId = deckKeyFromState();
+    const prog = loadProgress(deckId); if(!prog.seen) prog.seen={};
     const active=new Set(Object.keys(prog.seen));
     const next=deckRows.find(r=>!active.has(r.id));
     if(!next){ viewEl.innerHTML=`<div class="flashcard-progress muted">All phrases unlocked.</div>`; return; }
     const pk=todayKey();
     prog.seen[next.id]={firstSeen:pk, lastSeen:pk, seenCount:0};
     saveProgress(deckId,prog); syncProgressToGitHub(deckId,prog); initDeckPicker && initDeckPicker();
-    markUnlock(deckId);
+    const key = 'np_daily_' + deckId;
+    const daily = JSON.parse(localStorage.getItem(key) || '{}');
+    daily.used = Math.min((daily.used || 0) + 1, daily.allowed || 0);
+    localStorage.setItem(key, JSON.stringify(daily));
+    console.log('[daily]', deckKeyFromState(), daily);
     queue.push(next); idx=queue.length-1; step=STEPS.INTRO; render();
     allMastered = computeAllMastered(deckId, prog);
   }
