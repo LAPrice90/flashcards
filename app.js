@@ -108,6 +108,9 @@ const routes = {
   stats: renderPlaceholder('Stats'),
   settings: renderPlaceholder('Settings'),
   test: renderTestShell,
+  // Provide a stub so the dashboard doesn't render over the
+  // dedicated New Phrase flow handled in `js/newPhrase.js`.
+  newPhrase: () => document.createElement('div'),
 };
 
 async function render() {
