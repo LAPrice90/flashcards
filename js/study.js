@@ -1,13 +1,79 @@
 function deckKeyFromState() {
-  // Prefer the JSON filename stem already used by the fetch; fall back to STATE.activeDeckId.
-  // Known mapping for now:
   const map = {
     'Welsh – A1 Phrases': 'welsh_phrases_A1',
     'Welsh - A1 Phrases': 'welsh_phrases_A1',
     'welsh_a1': 'welsh_phrases_A1'
   };
-  const id = (STATE && STATE.activeDeckId) || '';
+  const id = (window.STATE && STATE.activeDeckId) || '';
   return map[id] || id || 'welsh_phrases_A1';
+}
+
+const dk          = deckKeyFromState();
+const progressKey = 'progress_' + dk;          // read/write here
+const dailyKey    = 'np_daily_' + dk;          // read in Test/Study; read/write in New Phrases
+const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchanged)
+
+(function migrateProgressIfNeeded(){
+  const legacy = 'progress_' + ((window.STATE && STATE.activeDeckId) || '');
+  if (legacy !== progressKey) {
+    const legacyVal = localStorage.getItem(legacy);
+    if (legacyVal && !localStorage.getItem(progressKey)) {
+      localStorage.setItem(progressKey, legacyVal);
+    }
+  }
+})();
+
+async function loadDeckSorted(){
+  const res = await fetch(`data/${dk}.json`, { cache: 'no-cache' });
+  const data = await res.json();
+  const rows = Array.isArray(data) ? data : (data.cards || data);
+  const mapRow = (r,i) => ({
+    id: r.id || r.card || `row_${i+1}`,
+    front: r.welsh || r.Welsh || r.front || r.cy || '',
+    back:  r.english || r.English || r.back || r.en || '',
+    unit:  r.unit || '', section: r.section || '',
+    card:  Number.isFinite(+r.card) ? +r.card : (i+1),
+    image: r.image || '',
+    audio: r.audio || '',
+    phonetic: r.pronunciation || r.phonetic || '',
+    example: r.example || '',
+    usage_note: r.usage_note || r.use || '',
+    word_breakdown: r.word_breakdown || r.grammar_notes || '',
+    pattern_examples: r.pattern_examples || '',
+    pattern_examples_en: r.pattern_examples_en || '',
+    slow_audio: r.slow_audio || '',
+    tags: r.tags || ''
+  });
+  const list = rows.map(mapRow).filter(x => x.id && x.front && x.back);
+  list.sort((a,b)=>{
+    const u = String(a.unit).localeCompare(String(b.unit)); if (u) return u;
+    const s = String(a.section).localeCompare(String(b.section)); if (s) return s;
+    const c = (a.card||0) - (b.card||0); if (c) return c;
+    return String(a.id).localeCompare(String(b.id));
+  });
+  return list;
+}
+
+function loadProgressSeen(){
+  try { return (JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}').seen) || {}; }
+  catch { return {}; }
+}
+
+function loadAttempts(){
+  try { return JSON.parse(localStorage.getItem(attemptsKey) || '{}'); }
+  catch { return {}; }
+}
+
+function isActiveCard(id, seen, attempts){
+  return !!(seen[id] || (attempts[id] && attempts[id].length));
+}
+
+function logAttempt(cardId, pass){
+  const obj = loadAttempts();
+  const arr = obj[cardId] || [];
+  arr.push({ ts: Date.now(), pass: !!pass });
+  obj[cardId] = arr;
+  localStorage.setItem(attemptsKey, JSON.stringify(obj));
 }
 
 async function renderReview(query) {
@@ -17,20 +83,18 @@ async function renderReview(query) {
   if (deckId !== STATE.activeDeckId) setActiveDeck(deckId);
 
   const dk = deckKeyFromState();
-  const active = DECKS.find(d => d.id === dk);
-  let cards = await loadDeckData(dk);
-  const attempts = loadAttemptsMap();
-  cards = cards.map(c => {
-    const arr = attempts[c.id] || [];
-    if (!arr.length) return { ...c, status: 'Unseen' };
-    const acc = lastNAccuracy(c.id, SCORE_WINDOW, attempts);
-    return { ...c, status: categoryFromPct(acc) };
-  }).filter(c => c.status === 'Struggling' || c.status === 'Needs review');
+  const activeDeck = DECKS.find(d => d.id === dk);
+  const deck = await loadDeckSorted();
+  const seen = loadProgressSeen();
+  const attempts = loadAttempts();
+  const cards = deck.filter(c => isActiveCard(c.id, seen, attempts));
+  console.log('[active-count]', deckKeyFromState(), cards.length);
+  console.log('[progress-key-used]', progressKey);
 
   if (!cards.length) {
     const err = document.createElement('div');
-    err.innerHTML = `<h1 class="h1">Review <span class="muted">(${active.name})</span></h1>` +
-      `<section class="card card--center">Nothing to review</section>`;
+    err.innerHTML = `<h1 class="h1">Review <span class="muted">(${activeDeck.name})</span></h1>` +
+      `<section class="card card--center">No introduced cards. Use New Phrases first.</section>`;
     return err;
   }
 
@@ -42,7 +106,7 @@ async function renderReview(query) {
 
   const wrap = document.createElement('div');
   wrap.innerHTML = `
-    <h1 class="h1">Review <span class="muted">(${active.name})</span></h1>
+    <h1 class="h1">Review <span class="muted">(${activeDeck.name})</span></h1>
     <section class="card card--center">
       <div class="flashcard" id="flashcard" data-view="${STATE.viewMode}">
         <div class="fc-topbar">
@@ -286,36 +350,4 @@ async function renderReview(query) {
   };
 
   return wrap;
-}
-async function loadDeckData(deckId) {
-  try {
-    // The JSON now follows the `welsh_phrases_A1.json` structure which groups
-    // phrases by status categories.
-    const dk = deckKeyFromState();
-    const res = await fetch(`data/${dk}.json`, { cache: 'no-cache' });
-    if (!res.ok) throw new Error(`Failed to load deck: ${dk}`);
-    const data = await res.json();
-    const rows = Object.values(data.by_status || {}).flat();
-    return rows.map((r, i) => ({
-      card: r.card || '',
-      unit: r.unit || '',
-      section: r.section || '',
-      id: r.id || String(i),
-      front: r.welsh || r.front || r.word || '',
-      back: r.english || r.back || r.translation || '',
-      example: r.example || '',
-      image: r.image || '',
-      audio: r.audio || '',
-      phonetic: r.pronunciation || r.phonetic || '',
-      word_breakdown: r.word_breakdown || r.grammar_notes || '',
-      usage_note: r.usage_note || r.use || '',
-      pattern_examples: r.pattern_examples || '',
-      pattern_examples_en: r.pattern_examples_en || '',
-      slow_audio: r.slow_audio || '',
-      tags: r.tags || '',
-    })).filter(r => r.id && r.front && r.back);
-  } catch (err) {
-    console.error(err);
-    return [];
-  }
 }
