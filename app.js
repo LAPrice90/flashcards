@@ -121,7 +121,7 @@ function parseHash() {
 
 /* ---------- Mobile menu ---------- */
 function initMobileMenu() {
-  const btn = document.querySelector('.menu-btn');
+  const btn = document.getElementById('menuToggle');
   const side = document.querySelector('.side');
   if (!btn || !side) return;
   btn.addEventListener('click', () => side.classList.toggle('open'));
