@@ -7,6 +7,22 @@
   const escapeHTML = (s) =>
     String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
+  // localStorage helpers
+  const LS_PROGRESS_PREFIX = 'progress_';
+  function loadProgress(deckId){
+    try{ return JSON.parse(localStorage.getItem(LS_PROGRESS_PREFIX+deckId) || '{}'); }catch{ return {}; }
+  }
+  function saveProgress(deckId,obj){
+    localStorage.setItem(LS_PROGRESS_PREFIX+deckId, JSON.stringify(obj));
+  }
+  function todayKey(){ const d=new Date(); const y=d.getFullYear(); const m=String(d.getMonth()+1).padStart(2,'0'); const day=String(d.getDate()).padStart(2,'0'); return `${y}-${m}-${day}`; }
+  function loadDaily(deckId){
+    try{ return JSON.parse(localStorage.getItem('np_daily_'+deckId) || '{}'); }catch{ return {}; }
+  }
+  function saveDaily(deckId,obj){
+    localStorage.setItem('np_daily_'+deckId, JSON.stringify(obj));
+  }
+
   // tolerant matching (same rules as test mode)
   function normalizeInput(s) {
     if (!s) return '';
@@ -151,10 +167,16 @@
       <section class="card card--center"><div id="np-root" class="flashcard"></div></section>`;
     viewEl = document.getElementById('np-root');
 
-    // load JSON and take the first few items for now
+    // load unseen items respecting daily allowance
     try {
       const all = await fetchDeckJSON();
-      queue = all.slice(0, 5);
+      const deckId = STATE.activeDeckId;
+      const prog = loadProgress(deckId);
+      const seen = (prog.seen || {});
+      const unseen = all.filter(c => !seen[c.id]);
+      const daily = loadDaily(deckId);
+      const allow = Math.max(0, (daily.allowed ?? 0) - (daily.used ?? 0));
+      queue = unseen.slice(0, allow > 0 ? allow : 0);
       idx = 0;
       step = STEPS.INTRO;
       render();
@@ -169,7 +191,7 @@
   function render() {
     stopAudio();
     const c = current();
-    if (!c) { viewEl.innerHTML = `<div class="muted">No items.</div>`; return; }
+    if (!c) { viewEl.innerHTML = `<div class="muted">No new cards today</div>`; return; }
 
     // common header image (from step 2 onwards we keep the phrase visible too)
     const img = c.image ? `<img src="${c.image}" alt="${escapeHTML(c.front)}" style="width:100%; border-radius:16px;">`
@@ -332,6 +354,24 @@
             </div>
             <div class="flashcard-progress muted">Great! Audio plays automatically.</div>
           `;
+
+          const deckId = STATE.activeDeckId;
+          const id = c.id;
+          const pk = todayKey();
+          const prog = loadProgress(deckId);
+          if (!prog.seen) prog.seen = {};
+          const entry = prog.seen[id] || { firstSeen: pk, seenCount: 0 };
+          entry.seenCount += 1;
+          entry.lastSeen = pk;
+          prog.seen[id] = entry;
+          saveProgress(deckId, prog);
+
+          const daily = loadDaily(deckId);
+          if (daily.date === pk) {
+            daily.used = Math.min((daily.used||0)+1, daily.allowed||0);
+            saveDaily(deckId, daily);
+          }
+
           playAudio(c.audio, 1.0);
           viewEl.querySelector('#np-play')?.addEventListener('click', () => playAudio(c.audio, 1.0));
           viewEl.querySelector('#np-next').addEventListener('click', nextCard);
