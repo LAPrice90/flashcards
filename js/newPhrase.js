@@ -386,8 +386,8 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
   window.renderNewPhrase = renderNewPhrase;
 
   // If the New Words route loaded before this script, re-render now that the view is ready.
-  if (location.hash.startsWith('#/newPhrase') && typeof render === 'function') {
-    render();
+  if (location.hash.startsWith('#/newPhrase') && typeof window.renderNewPhrase === 'function') {
+    window.renderNewPhrase();
   }
 
   // small style tweaks (reuse flashcard look)
