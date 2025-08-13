@@ -275,13 +275,20 @@ function getDailyNewAllowance(deckId, strugglingCount, unseenCount){
 }
 
 // Tiny JSON loader (local file)
+function numOrStr(v){ const n = Number(v); return Number.isFinite(n) ? n : String(v || ''); }
+function cmp(a,b){
+  const u = String(a.unit || '').localeCompare(String(b.unit || '')); if (u) return u;
+  const s = String(a.section || '').localeCompare(String(b.section || '')); if (s) return s;
+  const c = numOrStr(a.card) - numOrStr(b.card); if (c) return c;
+  return String(a.id).localeCompare(String(b.id));
+}
 async function loadDeckRows(deckId) {
   // Load the deck JSON which includes extra metadata and explicit Welsh/English headers
   const res = await fetch(`data/${deckId}.json`);
   if (!res.ok) throw new Error('Failed to load deck JSON');
   const data = await res.json();
   const rows = Object.values(data.by_status || {}).flat();
-  return rows.map((r, i) => ({
+  const mapped = rows.map((r, i) => ({
     card: r.card || '',
     unit: r.unit || '',
     section: r.section || '',
@@ -290,6 +297,8 @@ async function loadDeckRows(deckId) {
     back:  r.english || r.back  || r.translation || '',
     tags:  r.tags || '',
   })).filter(r => r.id && r.front);
+  mapped.sort(cmp);
+  return mapped;
 }
 
 // Hue (red→green) from 0–100%
