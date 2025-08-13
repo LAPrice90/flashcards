@@ -5,7 +5,12 @@
    Single-button fast/slow audio
    =========================== */
 
-const DECKS = [{ id: 'welsh_basics', name: 'Welsh – Basics', count: 29 }];
+// Updated to use the new data file `welsh_phrases_A1.csv` which includes
+// additional metadata columns and uses `welsh`/`english` headers instead of
+// the previous `front`/`back` pair.
+const DECKS = [
+  { id: 'welsh_phrases_A1', name: 'Welsh – A1 Phrases', count: 116 }
+];
 
 const STORAGE = {
   theme: 'fc_theme',
@@ -238,7 +243,8 @@ function dailyNewCount(struggling, maxDaily = 5) {
 
 // Tiny CSV loader (local file)
 async function loadDeckRows(deckId) {
-  const res = await fetch('data/welsh_basics.csv');
+  // Load the new deck CSV which includes extra metadata and explicit Welsh/English headers
+  const res = await fetch(`data/${deckId}.csv`);
   if (!res.ok) throw new Error('Failed to load deck CSV');
   const text = await res.text();
   const lines = text.trim().split(/\r?\n/);
@@ -250,9 +256,12 @@ async function loadDeckRows(deckId) {
     return obj;
   });
   return rows.map(r => ({
+    card: r.card || '',
+    unit: r.unit || '',
+    section: r.section || '',
     id: r.id || '',
-    front: r.front || r.word || '',
-    back:  r.back  || r.translation || '',
+    front: r.welsh || r.front || r.word || '',
+    back:  r.english || r.back  || r.translation || '',
     tags:  r.tags || '',
   })).filter(r => r.id && r.front);
 }

@@ -280,12 +280,15 @@ function parseCSV(text) {
 
 async function loadDeckData(deckId) {
   try {
-    const res = await fetch('data/welsh_basics.csv');
+    // The CSV now follows the `welsh_phrases_A1.csv` format which includes
+    // extra metadata columns (`card`, `unit`, `section`) and uses `welsh`/
+    // `english` instead of `front`/`back`.
+    const res = await fetch(`data/${deckId}.csv`);
     if (!res.ok) throw new Error(`Failed to load deck: ${deckId}`);
     const text = await res.text();
     const rows = parseCSV(text);
     rows.forEach((r, i) => {
-      const expected = ['id','front','back','image','audio','example','tags','phonetic','word_breakdown','usage_note','pattern_examples','pattern_examples_en'];
+      const expected = ['card','unit','section','id','welsh','english','image','audio','example','tags','phonetic','word_breakdown','usage_note','pattern_examples','pattern_examples_en'];
       const missing = expected.filter(k => !(k in r));
       if (missing.length) {
         console.warn(`Row ${i+2} likely misparsed. Missing: ${missing.join(', ')}. Did a field with commas lack quotes?`, r);
@@ -293,9 +296,12 @@ async function loadDeckData(deckId) {
     });
 
     return rows.map(r => ({
+      card: r.card || '',
+      unit: r.unit || '',
+      section: r.section || '',
       id: r.id || '',
-      front: r.front || r.word || '',
-      back: r.back || r.translation || '',
+      front: r.welsh || r.front || r.word || '',
+      back: r.english || r.back || r.translation || '',
       example: r.example || '',
       image: r.image || '',
       audio: r.audio || '',
