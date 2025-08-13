@@ -111,7 +111,7 @@ const routes = {
   stats: renderPlaceholder('Stats'),
   settings: renderPlaceholder('Settings'),
   test: renderTestShell,
-  newPhrase: () => document.createElement('div')
+  newPhrase: () => window.renderNewPhrase ? window.renderNewPhrase() : document.createElement('div')
 };
 
 async function render() {
