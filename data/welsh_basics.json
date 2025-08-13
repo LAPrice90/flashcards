@@ -1,8 +1,0 @@
-{
-  "id": "welsh_basics",
-  "name": "Welsh – Basics",
-  "cards": [
-    { "id": "w001", "front": "Bore da", "back": "Good morning", "image": "media/images/good-morning.jpg", "audio": "media/audio/good-morning.mp3", "example": "Bore da! Sut wyt ti?", "tags": "greeting" },
-    { "id": "w002", "front": "Prynhawn da", "back": "Good afternoon", "image": "media/images/good-afternoon.jpg", "audio": "media/audio/good-afternoon.mp3", "example": "Prynhawn da, Luke!", "tags": "greeting" }
-  ]
-}
