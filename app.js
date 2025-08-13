@@ -363,7 +363,8 @@ async function renderHome() {
       <div class="table-head">
         <div class="table-title">Progress</div>
         <div class="filters">
-          <button class="pill" data-filter="all"  aria-pressed="true">All</button>
+          <button class="pill" data-filter="today" aria-pressed="true">Today</button>
+          <button class="pill" data-filter="All">All</button>
           <button class="pill" data-filter="Struggling">Struggling</button>
           <button class="pill" data-filter="Needs review">Needs review</button>
           <button class="pill" data-filter="Mastered">Mastered</button>
@@ -465,11 +466,10 @@ async function renderHome() {
     ctaBtn.onclick = () => location.hash = '#/test';
   }
 
-  // Attention chips (top 6 hardest by accuracy, then recent failures if you track timestamps)
+  // Attention chips (top 6 from today's active set)
   const chipsBox = wrap.querySelector('#chips');
   chipsBox.innerHTML = '';
   activeToday
-    .sort((a,b) => a.acc - b.acc)
     .slice(0, 6)
     .forEach(c => {
       const pill = document.createElement('button');
@@ -485,13 +485,19 @@ async function renderHome() {
 
   // Progress table
   const tbody = wrap.querySelector('#progressBody');
-  const renderRows = (filter = 'all', q = '', base = enriched) => {
+  let baseList = activeToday; // default dataset
+  const renderRows = (filter = 'today', q = '') => {
+    // Switch base list by filter
+    if (filter === 'All') baseList = enriched;
+    else if (filter === 'Struggling') baseList = enriched.filter(x => x.status === 'Struggling');
+    else if (filter === 'Needs review') baseList = enriched.filter(x => x.status === 'Needs review');
+    else if (filter === 'Mastered') baseList = enriched.filter(x => x.status === 'Mastered');
+    else baseList = activeToday;
+
     const qlc = q.trim().toLowerCase();
-    const list = base.filter(r => {
-      const matchFilter = (filter === 'all') || (r.status === filter);
-      const matchQ = !qlc || r.front.toLowerCase().includes(qlc) || r.back.toLowerCase().includes(qlc);
-      return matchFilter && matchQ;
-    });
+    const list = baseList.filter(r =>
+      !qlc || r.front.toLowerCase().includes(qlc) || r.back.toLowerCase().includes(qlc)
+    );
     tbody.innerHTML = '';
     if (!list.length) {
       tbody.innerHTML = `<tr><td colspan="7" class="muted">No results.</td></tr>`;
@@ -524,7 +530,7 @@ async function renderHome() {
   };
 
   // Filter + search
-  let currentFilter = 'all';
+  let currentFilter = 'today';
   wrap.querySelectorAll('.filters .pill').forEach(btn => {
     btn.addEventListener('click', () => {
       wrap.querySelectorAll('.filters .pill').forEach(b => b.setAttribute('aria-pressed', 'false'));
@@ -537,7 +543,7 @@ async function renderHome() {
     renderRows(currentFilter, e.target.value || '');
   });
 
-  renderRows('all', '', activeToday); // first paint
+  renderRows(); // first paint
 
   return wrap;
 }
