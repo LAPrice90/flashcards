@@ -363,19 +363,24 @@ async function renderHome() {
 
   // Derive per-card metrics
   const enriched = rows.map(r => {
+    const arr = attempts[r.id] || [];
+    const lastCount = arr.slice(0, SCORE_WINDOW).length;
+    if (!arr.length) {
+      return { ...r, acc: 0, status: 'Unseen', lastCount };
+    }
     const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
     const status = categoryFromPct(acc);
-    const lastCount = (attempts[r.id] || []).slice(0, SCORE_WINDOW).length;
     return { ...r, acc, status, lastCount };
   });
 
   // Counts
+  const unseenCount     = enriched.filter(x => x.status === 'Unseen').length;
   const strugglingCount = enriched.filter(x => x.status === 'Struggling').length;
   const needsCount      = enriched.filter(x => x.status === 'Needs review').length;
   const masteredCount   = enriched.filter(x => x.status === 'Mastered').length;
 
   const reviewDue = strugglingCount + needsCount; // could add spaced-boost for mastered later
-  const newToday  = dailyNewCount(strugglingCount);
+  const newToday  = unseenCount > 0 ? 5 : 0; // TODO: replace with 15-rule once progress tracking is added
   const testCount = strugglingCount + Math.ceil(needsCount * 0.3); // simple heuristic
 
   // Fill stat cards
