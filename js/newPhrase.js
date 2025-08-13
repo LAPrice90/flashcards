@@ -4,14 +4,6 @@
 
 (() => {
   // ---------- Utilities ----------
-  const pick = (arr, n) => {
-    const a = arr.slice();
-    for (let i = a.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [a[i], a[j]] = [a[j], a[i]];
-    }
-    return a.slice(0, n);
-  };
   const escapeHTML = (s) =>
     String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
 
@@ -67,7 +59,7 @@
     if (!res.ok) throw new Error('Failed to load JSON');
     const data = await res.json();
     const entries = Object.values(data.by_status || {}).flat();
-    return entries.map((r, i) => ({
+    const mapped = entries.map((r, i) => ({
       card: r.card || '',
       unit: r.unit || '',
       section: r.section || '',
@@ -82,7 +74,19 @@
       pattern_examples: r.pattern_examples || '',
       pattern_examples_en: r.pattern_examples_en || '',
       example: r.example || ''
-    })).filter(r => r.id && r.front && r.back);
+    }));
+    function numOrStr(v){ const n = Number(v); return Number.isFinite(n)? n : String(v||''); }
+    function cmp(a,b){
+      const u = String(a.unit||'').localeCompare(String(b.unit||'')) || 0;
+      if (u) return u;
+      const s = String(a.section||'').localeCompare(String(b.section||'')) || 0;
+      if (s) return s;
+      const c = numOrStr(a.card) - numOrStr(b.card);
+      if (c) return c;
+      return String(a.id).localeCompare(String(b.id));
+    }
+    mapped.sort(cmp);
+    return mapped.filter(r => r.id && r.front && r.back);
   }
 
   // ---------- Audio ----------
@@ -147,10 +151,10 @@
       <section class="card card--center"><div id="np-root" class="flashcard"></div></section>`;
     viewEl = document.getElementById('np-root');
 
-    // load JSON and pick 5 random for now
+    // load JSON and take the first few items for now
     try {
       const all = await fetchDeckJSON();
-      queue = pick(all, 5);
+      queue = all.slice(0, 5);
       idx = 0;
       step = STEPS.INTRO;
       render();
