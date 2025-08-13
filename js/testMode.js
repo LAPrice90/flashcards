@@ -276,6 +276,11 @@
   window.addEventListener('DOMContentLoaded', mountIfTestRoute);
   window.addEventListener('hashchange', mountIfTestRoute);
 
+  // If the Test route was loaded before this script executed, mount immediately.
+  if (location.hash.startsWith('#/test')) {
+    mountIfTestRoute();
+  }
+
   /* ---------- Styles ---------- */
   const style = document.createElement('style');
   style.textContent = `
