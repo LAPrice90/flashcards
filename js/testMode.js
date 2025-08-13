@@ -67,26 +67,17 @@
     audioEl.play().catch(() => {/* autoplay might be blocked; user can tap button */});
   }
 
-  // ---------- CSV ----------
-  async function fetchDeckCSV() {
-    const res = await fetch('data/welsh_phrases_A1.csv');
-    if (!res.ok) throw new Error('Failed to load CSV');
-    const text = await res.text();
-    const lines = text.trim().split(/\r?\n/);
-    const headers = lines.shift().split(',');
-    const rows = lines.filter(l => l.trim().length).map(line => {
-      const values = line.split(/,(?=(?:[^"]*"[^"]*")*[^"]*$)/);
-      const obj = {};
-      headers.forEach((h, i) => {
-        obj[h.trim()] = (values[i] || '').replace(/^"|"$/g, '').trim();
-      });
-      return obj;
-    });
-    return rows.map(r => ({
+  // ---------- JSON ----------
+  async function fetchDeckJSON() {
+    const res = await fetch('data/welsh_phrases_A1.json');
+    if (!res.ok) throw new Error('Failed to load JSON');
+    const data = await res.json();
+    const entries = Object.values(data.by_status || {}).flat();
+    return entries.map((r, i) => ({
       card: r.card || '',
       unit: r.unit || '',
       section: r.section || '',
-      id: r.id || '',
+      id: r.id || String(i),
       front: r.welsh || r.front || r.word || '',       // Welsh
       back:  r.english || r.back  || r.translation || '',// English
       audio: r.audio || ''                  // optional audio file
@@ -368,9 +359,9 @@
     container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">Loading Test Mode…</div></div>`;
 
     try {
-      deck = await fetchDeckCSV();
+      deck = await fetchDeckJSON();
       if (!deck.length) {
-        container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">No cards found in CSV.</div></div>`;
+        container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">No cards found in JSON.</div></div>`;
         return;
       }
       restart();

@@ -265,54 +265,32 @@ async function renderReview(query) {
 
   return wrap;
 }
-function parseCSV(text) {
-  const lines = text.trim().split(/\r?\n/);
-  const headers = lines.shift().split(',');
-  return lines
-    .filter(line => line.trim().length)
-    .map(line => {
-      const values = line.split(/,(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)/);
-      const obj = {};
-      headers.forEach((h, i) => { obj[h.trim()] = (values[i] || '').replace(/^\"|\"$/g, '').trim(); });
-      return obj;
-    });
-}
-
 async function loadDeckData(deckId) {
   try {
-    // The CSV now follows the `welsh_phrases_A1.csv` format which includes
-    // extra metadata columns (`card`, `unit`, `section`) and uses `welsh`/
-    // `english` instead of `front`/`back`.
-    const res = await fetch(`data/${deckId}.csv`);
+    // The JSON now follows the `welsh_phrases_A1.json` structure which groups
+    // phrases by status categories.
+    const res = await fetch(`data/${deckId}.json`);
     if (!res.ok) throw new Error(`Failed to load deck: ${deckId}`);
-    const text = await res.text();
-    const rows = parseCSV(text);
-    rows.forEach((r, i) => {
-      const expected = ['card','unit','section','id','welsh','english','image','audio','example','tags','phonetic','word_breakdown','usage_note','pattern_examples','pattern_examples_en'];
-      const missing = expected.filter(k => !(k in r));
-      if (missing.length) {
-        console.warn(`Row ${i+2} likely misparsed. Missing: ${missing.join(', ')}. Did a field with commas lack quotes?`, r);
-      }
-    });
-
-    return rows.map(r => ({
+    const data = await res.json();
+    const rows = Object.values(data.by_status || {}).flat();
+    return rows.map((r, i) => ({
       card: r.card || '',
       unit: r.unit || '',
       section: r.section || '',
-      id: r.id || '',
+      id: r.id || String(i),
       front: r.welsh || r.front || r.word || '',
       back: r.english || r.back || r.translation || '',
       example: r.example || '',
       image: r.image || '',
       audio: r.audio || '',
-      phonetic: r.phonetic || '',
-      word_breakdown: r.word_breakdown || '',
-      usage_note: r.usage_note || '',
+      phonetic: r.pronunciation || r.phonetic || '',
+      word_breakdown: r.word_breakdown || r.grammar_notes || '',
+      usage_note: r.usage_note || r.use || '',
       pattern_examples: r.pattern_examples || '',
       pattern_examples_en: r.pattern_examples_en || '',
       slow_audio: r.slow_audio || '',
       tags: r.tags || '',
-    }));
+    })).filter(r => r.id && r.front && r.back);
   } catch (err) {
     console.error(err);
     return [];
