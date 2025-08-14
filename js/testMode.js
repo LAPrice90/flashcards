@@ -47,6 +47,7 @@ function fireProgressEvent(payload){
   }
 
   const SCORE_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
+  const SCORE_WINDOW = 10;
 
   function logAttempt(cardId, pass, opts){
     const obj = loadAttempts();
@@ -71,6 +72,15 @@ function fireProgressEvent(payload){
     return score;
   }
 
+  function lastNAccuracy(cardId, n = SCORE_WINDOW, map = loadAttempts()){
+    const raw = map[cardId] || [];
+    const scored = raw.filter(a => a.score !== false);
+    const arr = scored.slice(-n);
+    if (!arr.length) return 0;
+    const p = arr.filter(a => a.pass).length;
+    return Math.round((p / arr.length) * 100);
+  }
+
 
   // Test Mode – review only. Route: #/test
 
@@ -83,6 +93,7 @@ function fireProgressEvent(payload){
   let correct = 0;
   let wrong = [];
   let practiceMode = false;
+  let seenThisSession = new Set();
 
   /* ---------- Small helpers ---------- */
   function todayKey() {
@@ -236,6 +247,11 @@ function fireProgressEvent(payload){
   /* ---------- Rendering ---------- */
   function renderCard() {
     const c = deck[idx];
+    if(!seenThisSession.has(c.id)){
+      seenThisSession.add(c.id);
+      markSessionDone(c.id);
+      fireProgressEvent({ type:'seen', id: c.id });
+    }
     container.innerHTML = `
       <div class="flashcard">
         <div class="translation">${escapeHTML(c.back)}</div>
@@ -340,8 +356,6 @@ function fireProgressEvent(payload){
 
   function showResult(pass, userInput, opts) {
     const c = deck[idx];
-    markSessionDone(c.id);
-    fireProgressEvent({ type:'session-update', id: c.id });
     let resultHtml = '';
     if (pass) {
       resultHtml = '<div class="tm-result tm-correct">✓ Correct</div>';
@@ -391,6 +405,8 @@ function fireProgressEvent(payload){
 
   /* ---------- Flow ---------- */
   async function start() {
+    seenThisSession = new Set();
+    resetSession();
     container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">Loading…</div></div>`;
     try {
       let active = await buildActiveDeck();
@@ -408,13 +424,13 @@ function fireProgressEvent(payload){
           return;
         }
       }
-      active.sort((a,b)=>{
-        const u=(a.unit||'').localeCompare(b.unit||''); if(u) return u;
-        const s=(parseInt(a.section,10)||0)-(parseInt(b.section,10)||0); if(s) return s;
-        const ca=parseInt(a.card,10)||0; const cb=parseInt(b.card,10)||0; if(ca!==cb) return ca-cb;
-        return (a.id||'').localeCompare(b.id||'');
-      });
-      deck = shuffle(active);
+      const attemptsMap = loadAttempts();
+      active.forEach(c=>{ c.conf = lastNAccuracy(c.id, SCORE_WINDOW, attemptsMap); });
+      const groups = {};
+      active.forEach(c=>{ (groups[c.conf] = groups[c.conf] || []).push(c); });
+      const confKeys = Object.keys(groups).map(Number).sort((a,b)=>a-b);
+      active = confKeys.flatMap(conf=>shuffle(groups[conf]));
+      deck = active;
       idx = 0; correct = 0; wrong = [];
       renderCard();
     } catch (e) {
