@@ -59,11 +59,14 @@
     <main id="view" class="main"></main>
   </div>
 
-  <script src="js/study.js" defer></script>
-  <script src="js/app.js" defer></script>
-  <script src="js/testMode.js" defer></script>
+  <!-- feature routes first -->
   <script src="js/newPhrase.js" defer></script>
-  <script src="js/sync.js" defer></script>
+  <script src="js/study.js" defer></script>
+  <script src="js/testMode.js" defer></script>
+
+  <!-- app/router last so the functions above already exist -->
+  <script src="js/app.js" defer></script>
+
 
   <script>
     (function () {
