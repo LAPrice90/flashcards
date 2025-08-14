@@ -13,42 +13,42 @@ const progressKey = 'progress_' + dk;          // read/write here
 const dailyKey    = 'np_daily_' + dk;          // read in Test/Study; read/write in New Phrases
 const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchanged)
 
-// --- Navigation binding --------------------------------------------------
-// Allow the "New Phrases" button to open the view while keeping existing
-// rendering logic intact. Works even if the menu is generated later.
-function openNewPhrasesView() {
-  // Hide all panels and reveal the new phrases panel if present
-  const panels = document.querySelectorAll('[data-panel]');
-  let target = null;
-  panels.forEach(p => {
-    const isTarget = p.getAttribute('data-panel') === 'new-phrases';
-    p.hidden = !isTarget;
-    if (isTarget) target = p;
-  });
-  if (!target) console.warn('New Phrases panel not found');
-
-  // Render the New Phrases content (router fallback if needed)
-  if (typeof window.renderNewPhrase === 'function') {
-    window.renderNewPhrase();
+(function () {
+  function showPanel(id) {
+    document.querySelectorAll('[data-panel]').forEach(p => p.hidden = true);
+    var panel = document.querySelector(id);
+    if (panel) panel.hidden = false;
+  }
+  function openNewPhrasesView() {
+    console.log('[route] newPhrase');
+    showPanel('#panel-new-phrases');
+    if (typeof window.renderNewPhrase === 'function') {
+      window.renderNewPhrase();
+    }
+  }
+  function bind() {
+    var btn = document.querySelector('#new-phrases, [data-nav="new-phrases"], .js-new-phrases');
+    if (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        openNewPhrasesView();
+        location.hash = '#/newPhrase';
+      });
+    } else {
+      console.warn('[newPhrase] button not found');
+    }
+    window.addEventListener('hashchange', function () {
+      if (location.hash === '#/newPhrase') openNewPhrasesView();
+    });
+    if (location.hash === '#/newPhrase') openNewPhrasesView();
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bind);
   } else {
-    location.hash = '#/newPhrase';
+    bind();
   }
-}
-window.openNewPhrasesView = openNewPhrasesView;
-
-document.addEventListener('DOMContentLoaded', () => {
-  const selector = '#new-phrases, [data-nav="new-phrases"], .js-new-phrases';
-  if (!document.querySelector(selector)) {
-    console.warn('New Phrases button not found');
-  }
-  document.addEventListener('click', e => {
-    const btn = e.target.closest(selector);
-    if (!btn) return;
-    e.preventDefault();
-    console.log('Opening New Phrases view');
-    openNewPhrasesView();
-  });
-});
+  window.openNewPhrasesView = openNewPhrasesView;
+})();
 
 (function migrateProgressIfNeeded(){
   const legacy = 'progress_' + ((window.STATE && STATE.activeDeckId) || '');
