@@ -125,13 +125,9 @@ const routes = {
 };
 
 async function render() {
+  const [route, query] = parseHash();                 // ✅ read current route
   document.querySelectorAll('.nav a').forEach(a =>
-    a.addEventListener('click', (e) => {
-      e.preventDefault();
-      side.classList.remove('open');
-      const route = a.dataset.route || 'home';
-      go(route);
-    })
+    a.classList.toggle('active', a.dataset.route === route)
   );
 
   const el = document.getElementById('view');
@@ -139,6 +135,7 @@ async function render() {
   const out = fn(query);
   el.replaceChildren(out instanceof Promise ? await out : out);
 }
+
 
 function parseHash() {
   const raw = location.hash.startsWith('#/') ? location.hash.slice(2) : 'home';
@@ -151,11 +148,21 @@ function initMobileMenu() {
   const btn = document.getElementById('menuToggle');
   const side = document.querySelector('.side');
   if (!btn || !side) return;
+
   btn.addEventListener('click', () => side.classList.toggle('open'));
+
   document.querySelectorAll('.nav a').forEach(a =>
-    a.addEventListener('click', () => side.classList.remove('open'))
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      const side = document.querySelector('.side');
+      if (side) side.classList.remove('open');
+      const route = a.dataset.route || 'home';
+      go(route);
+    })
   );
+
 }
+
 
 /* ========= Storage helpers ========= */
 function todayKey() {
@@ -337,11 +344,12 @@ function renderPlaceholder(title){
 function go(route){
   const [cur] = parseHash();
   if (cur === route) {
-    render();          // force re-render when hash is unchanged
+    render(); // force re-render when same route
   } else {
     location.hash = '#/' + route;
   }
 }
+
 
 
 /* ========= Dashboard ========= */
@@ -505,7 +513,7 @@ async function renderHome(){
     ctaTitle.textContent = '🧪 Test Mode';
     ctaSub.textContent = 'Quick checks keep recall sharp.';
     ctaBtn.textContent = 'Start test';
-    ctaBtn.onclick = () => location.hash = '#/test';
+    ctaBtn.onclick = () => go('test');
   }
 
   const chipsBox = wrap.querySelector('#chips');
@@ -515,7 +523,7 @@ async function renderHome(){
     pill.className='chip '+(c.acc<50?'bad':c.acc<80?'warn':'good');
     pill.textContent=`${c.front} • ${c.acc}%`;
     pill.title=c.back;
-    pill.addEventListener('click',()=>{location.hash='#/test';});
+    pill.addEventListener('click', () => go('test'));
     chipsBox.appendChild(pill);
   });
 
