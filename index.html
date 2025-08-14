@@ -90,7 +90,7 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -153,13 +153,31 @@
       }
     }
 
+    let authBtn;
+
     document.addEventListener("DOMContentLoaded", () => {
-      const btn = document.createElement("button");
-      btn.textContent = "Sign in with Google";
-      btn.className = "btn";
-      btn.style.margin = "10px";
-      btn.onclick = signInWithGoogle;
-      document.querySelector(".side-footer").appendChild(btn);
+      authBtn = document.createElement("button");
+      authBtn.className = "btn";
+      authBtn.style.margin = "10px";
+      document.querySelector(".side-footer").appendChild(authBtn);
+    });
+
+    onAuthStateChanged(auth, user => {
+      if (!authBtn) return;
+      if (user) {
+        authBtn.textContent = "Sign out";
+        authBtn.onclick = async () => {
+          try {
+            await fcSaveCloud();
+            await signOut(auth);
+          } catch (err) {
+            console.error("Sign-out error:", err);
+          }
+        };
+      } else {
+        authBtn.textContent = "Sign in with Google";
+        authBtn.onclick = signInWithGoogle;
+      }
     });
 
     // Collect progress-related keys from localStorage and write them to Firestore
