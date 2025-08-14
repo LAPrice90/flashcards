@@ -1,3 +1,4 @@
+(function(){
 function deckKeyFromState() {
   const map = {
     'Welsh – A1 Phrases': 'welsh_phrases_A1',
@@ -324,3 +325,5 @@ async function renderReview(query) {
 
   return wrap;
 }
+window.renderReview = renderReview;
+})();

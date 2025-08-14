@@ -1,3 +1,4 @@
+(function(){
 function deckKeyFromState() {
   const map = {
     'Welsh – A1 Phrases': 'welsh_phrases_A1',
@@ -442,5 +443,7 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
     .chip{ display:inline-block; border:1px solid var(--border); background:var(--panel); border-radius:999px; padding:4px 10px; font-size:12px; color:#fff; margin:2px; }
   `;
   document.head.appendChild(style);
+})();
+
 })();
 
