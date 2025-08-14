@@ -169,7 +169,22 @@ function fireProgressEvent(payload){
     const deck = rows.map(r => ({ id: r.id, front: r.front, back: r.back, unit: r.unit, section: r.section, card: r.card }));
     const seen = loadProgressSeen();
     const attempts = loadAttempts();
-    const active = deck.filter(c => isActiveCard(c.id, seen, attempts));
+    const session = (()=>{ try{ return JSON.parse(localStorage.getItem(SESSION_KEY) || '{}'); } catch{ return {}; } })();
+    const doneSet = new Set(session.done || []);
+    const now = Date.now();
+    const active = deck.filter(c => {
+      if (!isActiveCard(c.id, seen, attempts)) return false;
+      if (doneSet.has(c.id)) return false;
+      const arr = attempts[c.id] || [];
+      for (let i = arr.length - 1; i >= 0; i--) {
+        const a = arr[i];
+        if (a.pass) {
+          if (now - a.ts < SCORE_COOLDOWN_MS) return false;
+          break;
+        }
+      }
+      return true;
+    });
     console.log('[active-count]', deckKeyFromState(), active.length);
     console.log('[progress-key-used]', progressKey);
     return active;
@@ -372,7 +387,11 @@ function fireProgressEvent(payload){
         renderCard();
       });
     }
-    container.querySelector('#tm-restart').addEventListener('click', start);
+    container.querySelector('#tm-restart').addEventListener('click', () => {
+      resetSession();
+      fireProgressEvent({ type:'session-reset' });
+      start();
+    });
   }
 
   /* ---------- Flow ---------- */
@@ -392,8 +411,6 @@ function fireProgressEvent(payload){
       });
       deck = shuffle(active);
       idx = 0; correct = 0; wrong = [];
-      resetSession();
-      fireProgressEvent({ type:'session-reset' });
       renderCard();
     } catch (e) {
       console.error(e);
