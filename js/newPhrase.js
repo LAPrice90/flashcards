@@ -148,12 +148,9 @@ function fireProgressEvent(payload){
     audioEl=new Audio(src); audioEl.playbackRate=rate;
     audioEl.play().catch(()=>{});
   }
-  function wait(ms){ return new Promise(res=>setTimeout(res,ms)); }
   async function playSequence(src){
     await playOne(src,1.0);
-    await wait(500);
     await playOne(src,0.6);
-    await wait(500);
     await playOne(src,1.0);
   }
   function playOne(src,rate){
