@@ -419,7 +419,8 @@ function fireProgressEvent(payload){
     container = document.getElementById('test-container');
     if (!container) { setTimeout(mountIfTestRoute, 0); return; }
 
-    practiceMode = false;
+    const params = new URLSearchParams(location.hash.split('?')[1] || '');
+    practiceMode = params.get('practice') === '1' || params.get('practice') === 'true';
     updatePracticeUI();
     const pBtn = document.getElementById('practiceToggle');
     if (pBtn) {
