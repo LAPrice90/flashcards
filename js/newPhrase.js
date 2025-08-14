@@ -212,16 +212,68 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
     try {
       deckRows = await loadDeckRows(deckId);
       const prog = loadProgress(deckId);
-      queue = deckRows.filter(r => (prog.seen||{})[r.id] && ((prog.seen[r.id].seenCount||0)===0));
-      idx=0; step=STEPS.INTRO;
-      allMastered = computeAllMastered(deckId, prog);
       const attempts = loadAttemptsMap();
-      const seenIds = new Set(Object.keys(prog.seen||{}));
-      const unseenCount = deckRows.filter(r=>!seenIds.has(r.id) && !(attempts[r.id]||[]).length).length;
-      const daily = getDailyNewAllowance(deckId, unseenCount, allMastered);
+      const seenIds = new Set(Object.keys(prog.seen || {}));
+      allMastered = computeAllMastered(deckId, prog);
+
+      // Count unseen cards
+      const unseenCards = deckRows.filter(r => !seenIds.has(r.id) && !(attempts[r.id] || []).length);
+      const unseenCount = unseenCards.length;
+
+      // Get today's allowance
+      let daily = getDailyNewAllowance(deckId, unseenCount, allMastered);
       console.log('[daily]', deckKeyFromState(), daily);
-      if(queue.length){ render(); }
-      else renderEmpty();
+
+      // Start with existing "new" cards (seen but seenCount=0)
+      queue = deckRows.filter(r => (prog.seen || {})[r.id] && ((prog.seen[r.id].seenCount || 0) === 0));
+
+      // If we can unlock more today, pick from unseen in proper course order
+      if (canUnlock(allMastered) && daily.allowed > daily.used) {
+        const orderLevels = { A1: 1, A2: 2, B1: 3, B2: 4, C1: 5, C2: 6 };
+        const sortByCourseOrder = (a, b) => {
+          const parseId = id => {
+            const parts = String(id || '').split('-');
+            return {
+              level: parts[0] || '',
+              section: parseInt(parts[1] || '0', 10),
+              phrase: parseInt(parts[2] || '0', 10)
+            };
+          };
+          const pa = parseId(a.id);
+          const pb = parseId(b.id);
+
+          const levelDiff = (orderLevels[pa.level] || 99) - (orderLevels[pb.level] || 99);
+          if (levelDiff) return levelDiff;
+
+          const sectionDiff = pa.section - pb.section;
+          if (sectionDiff) return sectionDiff;
+
+          return pa.phrase - pb.phrase;
+        };
+
+        const toUnlock = unseenCards.sort(sortByCourseOrder)
+                                    .slice(0, daily.allowed - daily.used);
+
+        const today = (new Date()).toISOString().slice(0, 10);
+        toUnlock.forEach(card => {
+          prog.seen[card.id] = { firstSeen: today, lastSeen: today, seenCount: 0 };
+          queue.push(card);
+        });
+        daily.used += toUnlock.length;
+        saveProgress(deckId, prog);
+        saveNewDaily(deckId, daily);
+      }
+
+
+      idx = 0;
+      step = STEPS.INTRO;
+
+      if (queue.length) {
+        render();
+      } else {
+        renderEmpty();
+      }
+
     } catch(e){
       console.error(e);
       viewEl.innerHTML=`<div class="muted">Failed to load data.</div>`;

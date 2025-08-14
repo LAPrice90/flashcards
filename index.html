@@ -47,7 +47,14 @@
           <input type="checkbox" id="themeToggle" />
           <span class="toggle-label">Light mode</span>
         </label>
+
+        <div style="display:flex; gap:8px; margin-top:10px;">
+          <button id="fc-export" class="btn">Export</button>
+          <button id="fc-import" class="btn">Import</button>
+          <input id="fc-import-file" type="file" accept="application/json" style="display:none;">
+        </div>
       </div>
+
     </aside>
 
     <!-- Main view -->
@@ -58,6 +65,7 @@
   <script src="js/app.js" defer></script>
   <script src="js/testMode.js" defer></script>
   <script src="js/newPhrase.js" defer></script>
+  <script src="js/sync.js" defer></script>
 
   <script>
     (function () {
@@ -81,6 +89,46 @@
       });
     })();
   </script>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyAChauzqXrxR96_YMt0SJs2ygk9FQ6FpwU",
+      authDomain: "flashcards-app-2f89e.firebaseapp.com",
+      projectId: "flashcards-app-2f89e",
+      storageBucket: "flashcards-app-2f89e.firebasestorage.app",
+      messagingSenderId: "886681573920",
+      appId: "1:886681573920:web:65a3133bbbadfa645dfa45",
+      measurementId: "G-3JK7388FG1"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+
+    async function signInWithGoogle() {
+      const provider = new GoogleAuthProvider();
+      try {
+        await signInWithPopup(auth, provider);
+        console.log("Signed in as", auth.currentUser.email);
+        alert("Signed in as " + auth.currentUser.email);
+      } catch (err) {
+        console.error("Login error:", err);
+      }
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+      const btn = document.createElement("button");
+      btn.textContent = "Sign in with Google";
+      btn.className = "btn";
+      btn.style.margin = "10px";
+      btn.onclick = signInWithGoogle;
+      document.querySelector(".side-footer").appendChild(btn);
+    });
+  </script>
+
+
 
 </body>
 </html>
