@@ -42,10 +42,23 @@ function isActiveCard(id, seen, attempts){
   return !!(seen[id] || (attempts[id] && attempts[id].length));
 }
 
+const SCORE_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
+
 function logAttempt(cardId, pass){
   const obj = loadAttempts();
   const arr = obj[cardId] || [];
-  arr.push({ ts: Date.now(), pass: !!pass });
+  const now = Date.now();
+  let score = true;
+  if (pass) {
+    for (let i = arr.length - 1; i >= 0; i--) {
+      const a = arr[i];
+      if (a.pass && a.score !== false) {
+        if (now - a.ts < SCORE_COOLDOWN_MS) score = false;
+        break;
+      }
+    }
+  }
+  arr.push({ ts: now, pass: !!pass, score });
   obj[cardId] = arr;
   localStorage.setItem(attemptsKey, JSON.stringify(obj));
 }
