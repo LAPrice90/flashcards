@@ -203,34 +203,63 @@ function currentDay(deckId){
 async function loadDeckRows(deckId){
   const dk = deckId || deckKeyFromState();
   const res = await fetch(`data/${dk}.json`, { cache: 'no-cache' });
-  if(!res.ok) throw new Error('Failed to load deck JSON');
+  if (!res.ok) throw new Error('Failed to load deck JSON');
   const data = await res.json();
-  const rows = Object.values(data.by_status||{}).flat();
-  rows.sort((a,b)=>{
-    const u=String(a.unit).localeCompare(String(b.unit)); if(u) return u;
-    const s=String(a.section).localeCompare(String(b.section)); if(s) return s;
-    const c=(a.card||0)-(b.card||0); if(c) return c;
-    return String(a.id).localeCompare(String(b.id));
+
+  // Accept several shapes: array, {by_status}, {rows}, {cards}, or a plain object of items
+  let raw = [];
+  if (Array.isArray(data)) {
+    raw = data;
+  } else if (Array.isArray(data.rows)) {
+    raw = data.rows;
+  } else if (Array.isArray(data.cards)) {
+    raw = data.cards;
+  } else if (data && data.by_status) {
+    raw = Object.values(data.by_status).flat();
+  } else if (data && typeof data === 'object') {
+    // last resort: treat object values as rows
+    raw = Object.values(data);
+  }
+
+  // Normalize to the fields the app uses
+  const rows = (raw || [])
+    .map((r, i) => ({
+      card: r.card || '',
+      unit: r.unit || '',
+      section: r.section || '',
+      id: r.id || String(i),
+      front: r.welsh || r.front || r.word || '',
+      back: r.english || r.back || r.translation || '',
+      tags: r.tags || '',
+      image: r.image || '',
+      audio: r.audio || '',
+      phonetic: r.pronunciation || r.phonetic || '',
+      example: r.example || '',
+      usage_note: r.usage_note || r.use || '',
+      word_breakdown: r.word_breakdown || r.grammar_notes || '',
+      pattern_examples: r.pattern_examples || '',
+      pattern_examples_en: r.pattern_examples_en || '',
+      slow_audio: r.slow_audio || ''
+    }))
+    .filter(r => r.id && r.front && r.back);
+
+  // Sort by Level → Section → Phrase using the ID (A1-1-1, etc.)
+  const orderLevels = { A1:1, A2:2, B1:3, B2:4, C1:5, C2:6 };
+  rows.sort((a, b) => {
+    const parseId = id => {
+      const p = String(id || '').split('-');
+      return { L: p[0] || '', S: parseInt(p[1] || '0', 10), P: parseInt(p[2] || '0', 10) };
+    };
+    const A = parseId(a.id), B = parseId(b.id);
+    const l = (orderLevels[A.L] || 99) - (orderLevels[B.L] || 99); if (l) return l;
+    const s = A.S - B.S; if (s) return s;
+    return A.P - B.P;
   });
-  return rows.map((r,i)=>({
-    card: r.card||'',
-    unit: r.unit||'',
-    section: r.section||'',
-    id: r.id || String(i),
-    front: r.welsh || r.front || r.word || '',
-    back: r.english || r.back || r.translation || '',
-    tags: r.tags || '',
-    image: r.image || '',
-    audio: r.audio || '',
-    phonetic: r.pronunciation || r.phonetic || '',
-    example: r.example || '',
-    usage_note: r.usage_note || r.use || '',
-    word_breakdown: r.word_breakdown || r.grammar_notes || '',
-    pattern_examples: r.pattern_examples || '',
-    pattern_examples_en: r.pattern_examples_en || '',
-    slow_audio: r.slow_audio || ''
-  })).filter(r=>r.id && r.front && r.back);
+
+  console.log(`[deck] ${dk} loaded ${rows.length} cards`);
+  return rows;
 }
+
 function getDailyNewAllowance(deckId, unseenCount, allMastered){
   const key = todayKey();
   let st = loadNewDaily(deckId);
