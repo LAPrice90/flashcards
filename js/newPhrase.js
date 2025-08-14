@@ -127,8 +127,13 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
     audioEl=new Audio(src); audioEl.playbackRate=rate;
     audioEl.play().catch(()=>{});
   }
+  function wait(ms){ return new Promise(res=>setTimeout(res,ms)); }
   async function playSequence(src){
-    await playOne(src,1.0); await playOne(src,0.6); await playOne(src,1.0);
+    await playOne(src,1.0);
+    await wait(500);
+    await playOne(src,0.6);
+    await wait(500);
+    await playOne(src,1.0);
   }
   function playOne(src,rate){
     return new Promise(res=>{
@@ -141,13 +146,13 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
   }
 
   /* ---------- Learning flow ---------- */
-  const STEPS={ INTRO:0,WELSH:1,LISTEN:2,MEANING:3,CONTEXT:4,DRILL1:5,DRILL2:6,DRILL3:7 };
+  const STEPS={ WELSH:0,MEANING:1,CONTEXT:2,DRILL1:3,DRILL2:4,DRILL3:5 };
 
   let viewEl=null;
   let deckRows=[];       // full deck rows
   let queue=[];          // active phrases (seen but not learned)
   let idx=0;             // index in queue
-  let step=STEPS.INTRO;  // current step
+  let step=STEPS.WELSH;  // current step
   let allMastered=true;  // recomputed after each change
 
   function routeName(){
@@ -229,7 +234,7 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
     queue = unseenCards.slice(0, Math.max(0, (daily.allowed || 0) - (daily.used || 0)));
 
     idx = 0;
-    step = STEPS.INTRO;
+    step = STEPS.WELSH;
 
 
       if (queue.length) {
@@ -255,49 +260,31 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
     const img = c.image ? `<img src="${c.image}" alt="${escapeHTML(c.front)}" style="width:100%; border-radius:16px;">`
                          : `<div class="no-image muted">No image</div>`;
 
-    if(step===STEPS.INTRO){
-      viewEl.innerHTML=`
-        <div class="flashcard-image">${img}</div>
-        <div class="flashcard-progress muted" style="margin-top:8px;">Tap Play to begin</div>
-        <div class="flashcard-actions">
-          <button class="btn audio-btn" id="np-play">🔊 Play</button>
-          <button class="btn nav-btn" id="np-skip" style="display:none">Next</button>
-        </div>
-        <div class="flashcard-progress muted">Card ${idx+1} of ${queue.length}</div>`;
-      viewEl.querySelector('#np-play').addEventListener('click',()=>{ playAudio(c.audio,1.0); step=STEPS.WELSH; setTimeout(render,250); });
-      return;
-    }
 
     if(step===STEPS.WELSH){
       viewEl.innerHTML=`
         <div class="flashcard-image">${img}</div>
         <div class="term" style="margin-top:8px;">${escapeHTML(c.front)}</div>
         <div class="tm-audio" style="margin-top:6px;">
-          <button class="btn audio-btn" id="np-play">🔊 Play</button>
-          <button class="btn audio-btn" id="np-play-slow" style="margin-left:6px;">🐢 0.6×</button>
+          <button class="btn audio-btn" id="np-play" disabled>🔊 Play</button>
+          <button class="btn audio-btn" id="np-play-slow" style="margin-left:6px;" disabled>🐢 0.6×</button>
         </div>
-        <div class="flashcard-actions">
-          <button class="btn nav-btn" id="np-next">Next</button>
-        </div>
-        <div class="flashcard-progress muted">Card ${idx+1} of ${queue.length}</div>`;
-      playAudio(c.audio,1.0);
-      viewEl.querySelector('#np-play').addEventListener('click',()=>playAudio(c.audio,1.0));
-      viewEl.querySelector('#np-play-slow').addEventListener('click',()=>playAudio(c.audio,0.6));
-      viewEl.querySelector('#np-next').addEventListener('click',()=>{step=STEPS.LISTEN; render();});
-      return;
-    }
-
-    if(step===STEPS.LISTEN){
-      viewEl.innerHTML=`
-        <div class="flashcard-image">${img}</div>
-        <div class="term" style="margin-top:8px;">${escapeHTML(c.front)}</div>
-        <div class="flashcard-progress muted" id="np-status" style="margin-top:6px;">Listening drill: normal → 0.6× → normal</div>
         <div class="flashcard-actions">
           <button class="btn nav-btn" id="np-next" disabled>Next</button>
         </div>
         <div class="flashcard-progress muted">Card ${idx+1} of ${queue.length}</div>`;
-      (async()=>{ await playSequence(c.audio); const nxt=viewEl.querySelector('#np-next'); if(nxt) nxt.disabled=false; })();
-      viewEl.querySelector('#np-next').addEventListener('click',()=>{step=STEPS.MEANING; render();});
+      const playBtn=viewEl.querySelector('#np-play');
+      const slowBtn=viewEl.querySelector('#np-play-slow');
+      const nextBtn=viewEl.querySelector('#np-next');
+      playBtn.addEventListener('click',()=>playAudio(c.audio,1.0));
+      slowBtn.addEventListener('click',()=>playAudio(c.audio,0.6));
+      nextBtn.addEventListener('click',()=>{step=STEPS.MEANING; render();});
+      (async()=>{
+        await playSequence(c.audio);
+        playBtn.disabled=false;
+        slowBtn.disabled=false;
+        nextBtn.disabled=false;
+      })();
       return;
     }
 
@@ -411,7 +398,7 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
   function nextCard(){
     stopAudio();
     if(idx>=queue.length){ renderEmpty(); return; }
-    step=STEPS.INTRO; render();
+    step=STEPS.WELSH; render();
   }
 
   function showIncorrect(userTyped,onRetry){
@@ -433,7 +420,7 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
     const active=new Set(Object.keys(prog.seen));
     const next=deckRows.find(r=>!active.has(r.id));
     if(!next){ viewEl.innerHTML=`<div class="flashcard-progress muted">All phrases unlocked.</div>`; return; }
-    queue.push(next); idx=queue.length-1; step=STEPS.INTRO; render();
+    queue.push(next); idx=queue.length-1; step=STEPS.WELSH; render();
     allMastered = computeAllMastered(deckId, prog);
   }
 
