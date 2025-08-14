@@ -118,13 +118,15 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
     const pk = progressKey;
     const prog = JSON.parse(localStorage.getItem(pk) || '{"seen":{}}');
     if (!prog.seen) prog.seen = {};
-    const today = (new Date()).toISOString().slice(0,10); // YYYY-MM-DD
+    const today = (new Date()).toISOString().slice(0,10);
     const entry = prog.seen[cardId] || { firstSeen: today, seenCount: 0 };
     entry.seenCount += 1;
     entry.lastSeen = today;
     prog.seen[cardId] = entry;
     localStorage.setItem(pk, JSON.stringify(prog));
+    window.fcSaveCloud && window.fcSaveCloud();
   }
+
 
   function canUnlock(allMastered){
     if(allMastered) return true;
@@ -406,6 +408,7 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
           const daily = JSON.parse(localStorage.getItem(dailyKey) || '{}');
           daily.used = Math.min((daily.used || 0) + 1, daily.allowed || 0);
           localStorage.setItem(dailyKey, JSON.stringify(daily));
+          window.fcSaveCloud && window.fcSaveCloud();
           console.log('[daily]', deckKeyFromState(), daily);
           viewEl.innerHTML=`
             <div class="tm-result tm-correct">✓ Correct</div>

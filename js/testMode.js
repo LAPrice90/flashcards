@@ -48,7 +48,9 @@
     arr.push({ ts: Date.now(), pass: !!pass });
     obj[cardId] = arr;
     localStorage.setItem(attemptsKey, JSON.stringify(obj));
+    window.fcSaveCloud && window.fcSaveCloud();
   }
+
 
   // Test Mode – review only. Route: #/test
 

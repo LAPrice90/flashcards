@@ -91,6 +91,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
     import { getAuth, GoogleAuthProvider, signInWithPopup } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+    import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyAChauzqXrxR96_YMt0SJs2ygk9FQ6FpwU",
@@ -104,13 +105,49 @@
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
+    const db = getFirestore(app);
+
+    // Clears all local progress/daily/test data
+    function clearLocalProgress() {
+      const keysToRemove = [];
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (/^progress_/.test(key) || /^np_daily_/.test(key) || key === "tm_attempts_v1") {
+          keysToRemove.push(key);
+        }
+      }
+      keysToRemove.forEach(k => localStorage.removeItem(k));
+    }
+
+    async function loadOrCreateCloudProgress(userId) {
+      const docRef = doc(db, "progress", userId);
+      const snapshot = await getDoc(docRef);
+
+      if (snapshot.exists()) {
+        console.log("Loaded progress from cloud");
+        const data = snapshot.data();
+        for (const [key, value] of Object.entries(data)) {
+          localStorage.setItem(key, value);
+        }
+      } else {
+        console.log("No cloud data found — creating empty progress");
+        await setDoc(docRef, {});
+      }
+    }
 
     async function signInWithGoogle() {
       const provider = new GoogleAuthProvider();
       try {
         await signInWithPopup(auth, provider);
         console.log("Signed in as", auth.currentUser.email);
-        alert("Signed in as " + auth.currentUser.email);
+
+        // Step 1: Clear local
+        clearLocalProgress();
+
+        // Step 2: Load from cloud or create fresh
+        await loadOrCreateCloudProgress(auth.currentUser.uid);
+
+        alert("Signed in as " + auth.currentUser.email + " and progress synced from cloud!");
       } catch (err) {
         console.error("Login error:", err);
       }
@@ -124,7 +161,28 @@
       btn.onclick = signInWithGoogle;
       document.querySelector(".side-footer").appendChild(btn);
     });
+
+    // Collect progress-related keys from localStorage and write them to Firestore
+    async function fcSaveCloud() {
+      if (!auth.currentUser) return; // not signed in → skip
+      const data = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (/^progress_/.test(k) || /^np_daily_/.test(k) || k === 'tm_attempts_v1') {
+          data[k] = localStorage.getItem(k);
+        }
+      }
+      const ref = doc(db, 'progress', auth.currentUser.uid);
+      await setDoc(ref, data);
+      // (Optional) console.log('Cloud sync ok');
+    }
+
+    // expose globally so other scripts can call it
+    window.fcSaveCloud = fcSaveCloud;
+
   </script>
+
+
 
 
 

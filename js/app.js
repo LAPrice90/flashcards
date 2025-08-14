@@ -157,6 +157,7 @@ function saveProgress(deckId,obj){
   const dk = deckId || deckKeyFromState();
   const progressKey = LS_PROGRESS_PREFIX + dk;
   localStorage.setItem(progressKey, JSON.stringify(obj));
+  window.fcSaveCloud && window.fcSaveCloud();
 }
 function loadNewDaily(deckId){
   const dk = deckId || deckKeyFromState();
@@ -168,6 +169,7 @@ function saveNewDaily(deckId,obj){
   const dk = deckId || deckKeyFromState();
   const dailyKey = LS_NEW_DAILY_PREFIX + dk;
   localStorage.setItem(dailyKey, JSON.stringify(obj));
+  window.fcSaveCloud && window.fcSaveCloud();
 }
 function loadAttemptsMap(){
   try{ return JSON.parse(localStorage.getItem(LS_ATTEMPTS_KEY) || '{}'); }
