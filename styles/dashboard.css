@@ -65,6 +65,8 @@ table.data tbody tr td:last-child{ border-radius:0 12px 12px 0; }
 .status.struggling{ background:#3b0e0e; }
 .status.needs-review{ background:#3b310e; }
 .status.mastered{ background:#0e283b; }
+.status.new-word{ background:#3b0e3b; }
+
 
 .acc{ display:flex; align-items:center; gap:8px; }
 .acc .bar{ width:120px; height:6px; background:#222831; border-radius:999px; overflow:hidden; }
