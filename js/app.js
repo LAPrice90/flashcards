@@ -125,10 +125,15 @@ const routes = {
 };
 
 async function render() {
-  const [route, query] = parseHash();
   document.querySelectorAll('.nav a').forEach(a =>
-    a.classList.toggle('active', a.dataset.route === route)
+    a.addEventListener('click', (e) => {
+      e.preventDefault();
+      side.classList.remove('open');
+      const route = a.dataset.route || 'home';
+      go(route);
+    })
   );
+
   const el = document.getElementById('view');
   const fn = routes[route] || routes.home;
   const out = fn(query);
@@ -329,6 +334,16 @@ function renderPlaceholder(title){
   return ()=>{const div=document.createElement('div');div.innerHTML=`<h1 class="h1">${title}</h1>`;return div;};
 }
 
+function go(route){
+  const [cur] = parseHash();
+  if (cur === route) {
+    render();          // force re-render when hash is unchanged
+  } else {
+    location.hash = '#/' + route;
+  }
+}
+
+
 /* ========= Dashboard ========= */
 async function renderHome(){
   const dk = deckKeyFromState();
@@ -411,9 +426,13 @@ async function renderHome(){
       </div>
     </section>`;
 
-  wrap.querySelector('#btn-review').addEventListener('click',()=>location.hash='#/review');
-  wrap.querySelector('#btn-new').addEventListener('click',()=>location.hash='#/newPhrase');
-  wrap.querySelector('#btn-test').addEventListener('click',()=>location.hash='#/test');
+  // was: ()=>location.hash='#/review'
+  wrap.querySelector('#btn-review').addEventListener('click', () => go('review'));
+  // was: ()=>location.hash='#/newPhrase'
+  wrap.querySelector('#btn-new').addEventListener('click', () => go('newPhrase'));
+  // was: ()=>location.hash='#/test'
+  wrap.querySelector('#btn-test').addEventListener('click', () => go('test'));
+
 
   const rows = await loadDeckRows(deckId);
   const seen = prog.seen || {};
@@ -471,17 +490,17 @@ async function renderHome(){
     ctaTitle.textContent = `🔁 ${reviewDue} due for review`;
     ctaSub.textContent = `You’re juggling ${strugglingCount} struggling items. Let’s stabilise these first.`;
     ctaBtn.textContent = 'Review now';
-    ctaBtn.onclick = () => location.hash = '#/review';
+    ctaBtn.onclick = () => go('review');
   } else if (newToday > 0) {
     ctaTitle.textContent = `🌱 ${newToday} New Phrase${newToday>1?'s':''} ready`;
     ctaSub.textContent = `Struggling: ${strugglingCount}. We’ll pace new items accordingly.`;
     ctaBtn.textContent = 'Start new';
-    ctaBtn.onclick = () => location.hash = '#/newPhrase';
+    ctaBtn.onclick = () => go('newPhrase');
   } else if (reviewDue > 0) {
     ctaTitle.textContent = `🔁 ${reviewDue} due for review`;
     ctaSub.textContent = `Mastered: ${masteredCount}. Keep the momentum.`;
     ctaBtn.textContent = 'Review now';
-    ctaBtn.onclick = () => location.hash = '#/review';
+    ctaBtn.onclick = () => go('test');
   } else {
     ctaTitle.textContent = '🧪 Test Mode';
     ctaSub.textContent = 'Quick checks keep recall sharp.';
