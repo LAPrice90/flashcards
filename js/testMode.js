@@ -202,11 +202,19 @@ function fireProgressEvent(payload){
         <div class="flashcard-actions"><button class="btn nav-btn" id="tm-next">Next</button></div>
         <div class="flashcard-progress muted">Card ${idx + 1} of ${deck.length}</div>
       </div>`;
-    container.querySelector('#tm-next').addEventListener('click', () => {
+    const nextBtn = container.querySelector('#tm-next');
+    function goNext(){
+      window.removeEventListener('keydown', onEnter);
       idx++;
       if (idx < deck.length) renderCard();
       else renderSummary();
-    });
+    }
+    function onEnter(e){
+      if(e.key === 'Enter'){ e.preventDefault(); goNext(); }
+    }
+    nextBtn.addEventListener('click', goNext);
+    window.addEventListener('keydown', onEnter);
+    focusField('#tm-next');
   }
 
   function renderSummary() {
