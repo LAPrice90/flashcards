@@ -374,24 +374,10 @@ function fireProgressEvent(payload){
         <div class="tm-result tm-correct" style="margin-top:8px;">${correct} / ${total} correct (${pct}%)</div>
         ${wrong.length ? `<div class="tm-mismatch"><div class="tm-label">Incorrect</div><ul class="tm-anslist">${list}</ul></div>` : ''}
         <div class="flashcard-actions" style="flex-direction:column; gap:6px;">
-          ${wrong.length ? '<button class="btn nav-btn" id="tm-retry">Retry failed</button>' : ''}
-          <button class="btn nav-btn" id="tm-restart">Restart</button>
           <a class="btn nav-btn" href="#/home">Home</a>
         </div>
         <div class="flashcard-progress muted">Nice work!</div>
       </div>`;
-    if (wrong.length) {
-      container.querySelector('#tm-retry').addEventListener('click', () => {
-        deck = shuffle(wrong);
-        idx = 0; correct = 0; wrong = [];
-        renderCard();
-      });
-    }
-    container.querySelector('#tm-restart').addEventListener('click', () => {
-      resetSession();
-      fireProgressEvent({ type:'session-reset' });
-      start();
-    });
   }
 
   /* ---------- Flow ---------- */
