@@ -48,12 +48,14 @@ function fireProgressEvent(payload){
 
   const SCORE_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
 
-  function logAttempt(cardId, pass){
+  function logAttempt(cardId, pass, opts){
     const obj = loadAttempts();
     const arr = obj[cardId] || [];
     const now = Date.now();
     let score = true;
-    if (pass) {
+    if (opts && opts.forceNoScore) {
+      score = false;
+    } else if (pass) {
       for (let i = arr.length - 1; i >= 0; i--) {
         const a = arr[i];
         if (a.pass && a.score !== false) {
@@ -66,6 +68,7 @@ function fireProgressEvent(payload){
     obj[cardId] = arr;
     localStorage.setItem(attemptsKey, JSON.stringify(obj));
     window.fcSaveCloud && window.fcSaveCloud();
+    return score;
   }
 
 
@@ -200,18 +203,97 @@ function fireProgressEvent(payload){
     const pass = !skip && equalsLoose(val, c.front);
     logAttempt(c.id, pass);
     fireProgressEvent({ type:'attempt', id: c.id, pass });
-    if (pass) correct++; else { wrong.push(c); }
-    showResult(pass, val);
+    if (pass) {
+      correct++;
+      showResult(true, val);
+    } else {
+      wrong.push(c);
+      startDrill(c, val);
+    }
   }
 
-  function showResult(pass, userInput) {
+  function startDrill(card, initialInput) {
+    function copyStep(step, wrongVal) {
+      const label = step === 1 ? 'Copy it (1/2)' : step === 2 ? 'Copy it (2/2)' : 'Copy it again';
+      container.innerHTML = `
+        <div class="flashcard">
+          <div class="term">${escapeHTML(card.front)}</div>
+          ${typeof wrongVal !== 'undefined' ? '<div class="tm-result tm-fail">✖ Incorrect</div>' : ''}
+          ${typeof wrongVal !== 'undefined' ? `<div class="tm-mismatch"><div class="tm-label">Your answer</div><div class="tm-ansbox">${escapeHTML(wrongVal || '—')}</div></div>` : ''}
+          <div class="tm-inputblock">
+            <label class="tm-label">${label}</label>
+            <input id="tm-drill" class="tm-field" type="text" placeholder="${escapeHTML(card.front)}" autocomplete="off" autocapitalize="off" spellcheck="false">
+          </div>
+          <div class="flashcard-actions"><button class="btn nav-btn" id="tm-submit">Submit</button></div>
+          <div class="flashcard-progress muted">Card ${idx + 1} of ${deck.length}</div>
+        </div>`;
+      const inp = container.querySelector('#tm-drill');
+      function submit(){
+        const val = inp.value || '';
+        const ok = equalsLoose(val, card.front);
+        logAttempt(card.id, ok, { forceNoScore: true });
+        fireProgressEvent({ type:'attempt', id: card.id, pass: ok });
+        if (ok) {
+          if (step === 1) copyStep(2);
+          else if (step === 2) blindStep(1);
+          else blindStep(2);
+        } else {
+          copyStep(step, val);
+        }
+      }
+      container.querySelector('#tm-submit').addEventListener('click', submit);
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
+      focusField('#tm-drill');
+    }
+
+    function blindStep(attempt) {
+      container.innerHTML = `
+        <div class="flashcard">
+          <div class="translation">${escapeHTML(card.back)}</div>
+          <div class="tm-inputblock" style="margin-top:8px;">
+            <label class="tm-label">Type the Welsh</label>
+            <input id="tm-drill" class="tm-field" type="text" placeholder="Type the Welsh…" autocomplete="off" autocapitalize="off" spellcheck="false">
+          </div>
+          <div class="flashcard-actions"><button class="btn nav-btn" id="tm-submit">Submit</button></div>
+          <div class="flashcard-progress muted">Card ${idx + 1} of ${deck.length}</div>
+        </div>`;
+      const inp = container.querySelector('#tm-drill');
+      function submit(){
+        const val = inp.value || '';
+        const ok = equalsLoose(val, card.front);
+        const counted = logAttempt(card.id, ok) ;
+        fireProgressEvent({ type:'attempt', id: card.id, pass: ok });
+        if (ok) {
+          showResult(true, val, { scoreCounted: counted });
+        } else if (attempt === 1) {
+          copyStep(3, val);
+        } else {
+          showResult(false, val);
+        }
+      }
+      container.querySelector('#tm-submit').addEventListener('click', submit);
+      inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); submit(); } });
+      focusField('#tm-drill');
+    }
+
+    copyStep(1, initialInput);
+  }
+
+  function showResult(pass, userInput, opts) {
     const c = deck[idx];
+    let resultHtml = '';
+    if (pass) {
+      resultHtml = '<div class="tm-result tm-correct">✓ Correct</div>';
+      if (opts && opts.scoreCounted === false) {
+        resultHtml += '<div class="tm-label">Confidence unchanged (1h cooldown)</div>';
+      }
+    } else {
+      resultHtml = '<div class="tm-result tm-fail">✖ Incorrect</div>\n           <div class="tm-mismatch">\n             <div class="tm-label">Your answer</div>\n             <div class="tm-ansbox">' + escapeHTML(userInput || '—') + '</div>\n           </div>';
+    }
     container.innerHTML = `
       <div class="flashcard">
         <div class="term">${escapeHTML(c.front)}</div>
-        ${pass
-          ? '<div class="tm-result tm-correct">✓ Correct</div>'
-          : '<div class="tm-result tm-fail">✖ Incorrect</div>\n           <div class="tm-mismatch">\n             <div class="tm-label">Your answer</div>\n             <div class="tm-ansbox">' + escapeHTML(userInput || '—') + '</div>\n           </div>'}
+        ${resultHtml}
         <div class="flashcard-actions"><button class="btn nav-btn" id="tm-next">Next</button></div>
         <div class="flashcard-progress muted">Card ${idx + 1} of ${deck.length}</div>
       </div>`;
