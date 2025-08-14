@@ -90,9 +90,13 @@
 
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+    import {
+      getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
+      getRedirectResult, signOut, onAuthStateChanged
+    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
+    // --- Your config (from Firebase) ---
     const firebaseConfig = {
       apiKey: "AIzaSyAChauzqXrxR96_YMt0SJs2ygk9FQ6FpwU",
       authDomain: "flashcards-app-2f89e.firebaseapp.com",
@@ -103,102 +107,120 @@
       measurementId: "G-3JK7388FG1"
     };
 
-    const app = initializeApp(firebaseConfig);
+    // --- Init ---
+    const app  = initializeApp(firebaseConfig);
     const auth = getAuth(app);
-    const db = getFirestore(app);
+    const db   = getFirestore(app);
 
-    // Clears all local progress/daily/test data
+    // --- Helpers ---
     function clearLocalProgress() {
-      const keysToRemove = [];
+      const toRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (/^progress_/.test(key) || /^np_daily_/.test(key) || key === "tm_attempts_v1") {
-          keysToRemove.push(key);
-        }
+        const k = localStorage.key(i);
+        if (/^progress_/.test(k) || /^np_daily_/.test(k) || k === "tm_attempts_v1") toRemove.push(k);
       }
-      keysToRemove.forEach(k => localStorage.removeItem(k));
+      toRemove.forEach(k => localStorage.removeItem(k));
     }
 
-    async function loadOrCreateCloudProgress(userId) {
-      const docRef = doc(db, "progress", userId);
-      const snapshot = await getDoc(docRef);
-
-      if (snapshot.exists()) {
-        console.log("Loaded progress from cloud");
-        const data = snapshot.data();
-        for (const [key, value] of Object.entries(data)) {
-          localStorage.setItem(key, value);
-        }
+    async function loadOrCreateCloudProgress(uid) {
+      const ref = doc(db, "progress", uid);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        const data = snap.data();
+        for (const [k, v] of Object.entries(data)) localStorage.setItem(k, v);
       } else {
-        console.log("No cloud data found — creating empty progress");
-        await setDoc(docRef, {});
+        await setDoc(ref, {}); // start empty
       }
     }
 
+    // Collect progress keys and save to Firestore (called by app.js/newPhrase.js/testMode.js)
+    async function fcSaveCloud() {
+      if (!auth.currentUser) return;
+      const data = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (/^progress_/.test(k) || /^np_daily_/.test(k) || k === "tm_attempts_v1") {
+          data[k] = localStorage.getItem(k);
+        }
+      }
+      await setDoc(doc(db, "progress", auth.currentUser.uid), data);
+    }
+    window.fcSaveCloud = fcSaveCloud;
+
+    async function afterLogin() {
+      clearLocalProgress();
+      await loadOrCreateCloudProgress(auth.currentUser.uid);
+      location.reload();
+    }
+
+    // --- Auth actions ---
     async function signInWithGoogle() {
       const provider = new GoogleAuthProvider();
       try {
         await signInWithPopup(auth, provider);
-        console.log("Signed in as", auth.currentUser.email);
-
-        // Step 1: Clear local
-        clearLocalProgress();
-
-        // Step 2: Load from cloud or create fresh
-        await loadOrCreateCloudProgress(auth.currentUser.uid);
-
-        alert("Signed in as " + auth.currentUser.email + " and progress synced from cloud!");
+        await afterLogin();
       } catch (err) {
-        console.error("Login error:", err);
+        // Popup blocked/closed? Use redirect.
+        await signInWithRedirect(auth, provider);
+      }
+    }
+    async function signOutUser() {
+      await signOut(auth);
+      clearLocalProgress();
+      location.reload();
+    }
+
+    // Handle redirect completion (mobile/Safari)
+    getRedirectResult(auth).then(async (res) => {
+      if (res && res.user) await afterLogin();
+    }).catch(() => {});
+
+    // --- Tiny auth UI (status + toggle button) ---
+    function ensureAuthUI() {
+      const host = document.querySelector(".side-footer") || document.body;
+      let box = document.getElementById("authBox");
+      if (!box) {
+        box = document.createElement("div");
+        box.id = "authBox";
+        box.style.display = "flex";
+        box.style.flexDirection = "column";
+        box.style.gap = "6px";
+        box.style.marginTop = "10px";
+        host.appendChild(box);
+      }
+      if (!document.getElementById("authStatus")) {
+        const s = document.createElement("div");
+        s.id = "authStatus";
+        s.className = "muted";
+        box.appendChild(s);
+      }
+      if (!document.getElementById("authBtn")) {
+        const b = document.createElement("button");
+        b.id = "authBtn";
+        b.className = "btn";
+        box.appendChild(b);
       }
     }
 
-    let authBtn;
-
-    document.addEventListener("DOMContentLoaded", () => {
-      authBtn = document.createElement("button");
-      authBtn.className = "btn";
-      authBtn.style.margin = "10px";
-      document.querySelector(".side-footer").appendChild(authBtn);
-    });
-
-    onAuthStateChanged(auth, user => {
-      if (!authBtn) return;
+    function renderAuthUI(user) {
+      ensureAuthUI();
+      const statusEl = document.getElementById("authStatus");
+      const btn = document.getElementById("authBtn");
       if (user) {
-        authBtn.textContent = "Sign out";
-        authBtn.onclick = async () => {
-          try {
-            await fcSaveCloud();
-            await signOut(auth);
-          } catch (err) {
-            console.error("Sign-out error:", err);
-          }
-        };
+        statusEl.textContent = `Signed in as ${user.email}`;
+        btn.textContent = "Sign out";
+        btn.onclick = signOutUser;
       } else {
-        authBtn.textContent = "Sign in with Google";
-        authBtn.onclick = signInWithGoogle;
+        statusEl.textContent = "Not signed in";
+        btn.textContent = "Sign in with Google";
+        btn.onclick = signInWithGoogle;
       }
-    });
-
-    // Collect progress-related keys from localStorage and write them to Firestore
-    async function fcSaveCloud() {
-      if (!auth.currentUser) return; // not signed in → skip
-      const data = {};
-      for (let i = 0; i < localStorage.length; i++) {
-        const k = localStorage.key(i);
-        if (/^progress_/.test(k) || /^np_daily_/.test(k) || k === 'tm_attempts_v1') {
-          data[k] = localStorage.getItem(k);
-        }
-      }
-      const ref = doc(db, 'progress', auth.currentUser.uid);
-      await setDoc(ref, data);
-      // (Optional) console.log('Cloud sync ok');
     }
 
-    // expose globally so other scripts can call it
-    window.fcSaveCloud = fcSaveCloud;
-
+    onAuthStateChanged(auth, (user) => renderAuthUI(user));
+    document.addEventListener("DOMContentLoaded", () => renderAuthUI(auth.currentUser));
   </script>
+
 
 
 
