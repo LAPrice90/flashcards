@@ -234,16 +234,25 @@ async function loadDeckRows(deckId){
 function getDailyNewAllowance(deckId, unseenCount, allMastered){
   const key = todayKey();
   let st = loadNewDaily(deckId);
-  if (st.date !== key || (allMastered && st.used >= st.allowed)) {
-    const allowed = Math.min(SETTINGS.newPerDay, unseenCount);
-    st = {date:key, allowed, used:0};
+  const cap = SETTINGS.newPerDay; // e.g., 5
+
+  // New day OR nothing stored → start fresh
+  if (st.date !== key) {
+    const allowed = Math.min(cap, unseenCount);
+    st = { date: key, allowed, used: 0 };
     saveNewDaily(deckId, st);
     return st;
   }
-  const allowed = Math.min(st.allowed ?? 0, unseenCount);
-  return {date:key, allowed, used: st.used ?? 0};
-}
 
+  // Always clamp to cap and unseen
+  const allowed = Math.min(st.allowed ?? 0, cap, unseenCount);
+  const used    = Math.min(st.used ?? 0, allowed);
+
+  // If everything is mastered, keep today's numbers but cap correctly
+  const out = { date: key, allowed, used };
+  if (out.allowed !== st.allowed || out.used !== st.used) saveNewDaily(deckId, out);
+  return out;
+}
 /* ========= Views ========= */
 function renderTestShell(){
   const wrap=document.createElement('div');
