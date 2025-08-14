@@ -14,6 +14,7 @@ const STORAGE = {
 const LS_PROGRESS_PREFIX = 'progress_';
 const LS_NEW_DAILY_PREFIX = 'np_daily_';
 const LS_ATTEMPTS_KEY = 'tm_attempts_v1';
+const LS_START_KEY = 'tm_start_date';
 const SCORE_WINDOW = 10;
 
 function deckKeyFromState() {
@@ -33,6 +34,15 @@ const STATE = {
   viewMode: loadViewMode(),
   showExamplesEN: loadExamplesEN()
 };
+
+const dk          = deckKeyFromState();
+const progressKey = 'progress_' + dk;          // read/write
+const dailyKey    = 'np_daily_' + dk;          // read in Home/Test; read/write in New Phrases
+const attemptsKey = 'tm_attempts_v1';          // global attempts
+
+function fireProgressEvent(payload){
+  window.dispatchEvent(new CustomEvent('fc:progress-updated', { detail: payload || {} }));
+}
 
 function loadActiveDeckId() {
   const saved = localStorage.getItem(STORAGE.deck);
@@ -145,6 +155,7 @@ function initMobileMenu() {
 /* ========= Storage helpers ========= */
 function todayKey() {
   const d = new Date();
+  d.setHours(0,0,0,0);
   return d.toISOString().slice(0,10);
 }
 function loadProgress(deckId){
@@ -176,7 +187,7 @@ function loadAttemptsMap(){
   catch { return {}; }
 }
 function lastNAccuracy(cardId,n=SCORE_WINDOW,map=loadAttemptsMap()){
-  const arr = (map[cardId] || []).slice(0,n);
+  const arr = (map[cardId] || []).slice(-n);
   if (!arr.length) return 0;
   const p = arr.filter(a=>a.pass).length;
   return Math.round((p/arr.length)*100);
@@ -190,15 +201,15 @@ function accuracyHue(p){
   const clamped=Math.max(0,Math.min(100,p));
   return Math.round((clamped/100)*120);
 }
-function currentDay(deckId){
-  const prog = loadProgress(deckId);
-  const dates = Object.values(prog.seen || {}).map(v=>v.firstSeen).filter(Boolean);
-  if(!dates.length) return 1;
-  dates.sort();
-  const start = new Date(dates[0]);
-  const today = new Date(todayKey());
-  const diff = Math.floor((today - start)/86400000);
-  return diff+1;
+function getDayNumber(){
+  const today = todayKey();
+  let start = localStorage.getItem(LS_START_KEY);
+  if(!start){
+    localStorage.setItem(LS_START_KEY, today);
+    return 1;
+  }
+  const diff = Math.floor((new Date(today) - new Date(start))/86400000);
+  return diff + 1;
 }
 async function loadDeckRows(deckId){
   const dk = deckId || deckKeyFromState();
@@ -260,7 +271,7 @@ async function loadDeckRows(deckId){
   return rows;
 }
 
-function getDailyNewAllowance(deckId, unseenCount, allMastered){
+function getDailyNewAllowance(deckId, strugglingCount, unseenCount){
   const key = todayKey();
   let st = loadNewDaily(deckId);
   const cap = SETTINGS.newPerDay; // e.g., 5
@@ -323,11 +334,11 @@ async function renderHome(){
   const dk = deckKeyFromState();
   const deckId = dk;
   const active = DECKS.find(d=>d.id===deckId);
-  const dailyKey = 'np_daily_' + dk;
-  const progressKey = 'progress_' + dk;
+  const prog  = JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}');
+  const attempts = JSON.parse(localStorage.getItem(attemptsKey) || '{}');
 
   (function migrateDailyIfNeeded(){
-    const canonical = dailyKey;
+    const canonical = 'np_daily_' + dk;
     const legacy    = 'np_daily_' + ((STATE && STATE.activeDeckId) || '');
     if (canonical !== legacy) {
       const legacyVal = localStorage.getItem(legacy);
@@ -404,41 +415,49 @@ async function renderHome(){
   wrap.querySelector('#btn-new').addEventListener('click',()=>location.hash='#/newPhrase');
   wrap.querySelector('#btn-test').addEventListener('click',()=>location.hash='#/test');
 
-  const attempts = loadAttemptsMap();
   const rows = await loadDeckRows(deckId);
-  const prog = loadProgress(deckId);
-  const seenIds = new Set(Object.keys(prog.seen||{}));
-  const activeRows = rows.filter(r=>seenIds.has(r.id));
-  const unseenCount = rows.filter(r=>!seenIds.has(r.id) && !(attempts[r.id]||[]).length).length;
+  const seen = prog.seen || {};
+  const activeRows = rows.filter(r=>seen[r.id] || (attempts[r.id] && attempts[r.id].length > 0));
+  const unseenRows = rows.filter(r=>!seen[r.id] && !(attempts[r.id] && attempts[r.id].length > 0));
+  const unseenCount = unseenRows.length;
 
   const enriched = activeRows.map(r=>{
     const arr = attempts[r.id] || [];
-    const lastCount = arr.slice(0,SCORE_WINDOW).length;
-    if(!arr.length){
-      return {...r, acc:0, status:'Unseen', lastCount};
-    }
     const acc = lastNAccuracy(r.id,SCORE_WINDOW,attempts);
     const status = categoryFromPct(acc);
-    return {...r, acc, status, lastCount};
+    return {...r, acc, status, lastCount: arr.slice(-SCORE_WINDOW).length};
   });
 
   const strugglingCount = enriched.filter(x=>x.status==='Struggling').length;
-  const needsCount = enriched.filter(x=>x.status==='Needs review').length;
-  const masteredCount = enriched.filter(x=>x.status==='Mastered').length;
+  const needsCount      = enriched.filter(x=>x.status==='Needs review').length;
+  const masteredCount   = enriched.filter(x=>x.status==='Mastered').length;
   const reviewDue = strugglingCount + needsCount;
   const allMastered = enriched.length > 0 && reviewDue === 0;
-  getDailyNewAllowance(deckId, unseenCount, allMastered);
-  const daily = JSON.parse(localStorage.getItem(dailyKey) || '{}');
-  const newToday = Math.max(0, (daily.allowed || 0) - (daily.used || 0));
-  console.log('[daily]', deckKeyFromState(), daily);
-  const reviewList = enriched.filter(x=>x.status==='Struggling' || x.status==='Needs review');
-  const activeToday = reviewList.slice(0, newToday ? newToday : reviewList.length);
-  const testCount = strugglingCount + Math.ceil(needsCount * 0.3);
+  getDailyNewAllowance(deckId, strugglingCount, unseenCount);
+  const daily2 = JSON.parse(localStorage.getItem(dailyKey) || '{}');
+  const newToday = Math.max(0, (daily2.allowed || 0) - (daily2.used || 0));
+  console.log('[daily]', deckKeyFromState(), daily2);
+
+  let newRemaining = newToday;
+  const todayList = [];
+  for(const r of rows){
+    if(seen[r.id] || (attempts[r.id] && attempts[r.id].length > 0)){
+      const arr = attempts[r.id] || [];
+      const acc = lastNAccuracy(r.id,SCORE_WINDOW,attempts);
+      const status = categoryFromPct(acc);
+      todayList.push({...r, acc, status, lastCount: arr.slice(-SCORE_WINDOW).length});
+    } else if(newRemaining > 0){
+      todayList.push({...r, acc:0, status:'Unseen', lastCount:0});
+      newRemaining--;
+    }
+  }
+
+  const testCount = activeRows.length;
 
   wrap.querySelector('#stat-review-num').textContent = reviewDue;
   wrap.querySelector('#stat-new-num').textContent = newToday;
   wrap.querySelector('#stat-test-num').textContent = testCount;
-  wrap.querySelector('#day-count').textContent = currentDay(deckId);
+  wrap.querySelector('#day-count').textContent = getDayNumber();
 
   colorStatCard(wrap.querySelector('#stat-review'), 100 - Math.min(100, reviewDue * 8));
   colorStatCard(wrap.querySelector('#stat-new'), newToday ? 80 : 30);
@@ -472,7 +491,7 @@ async function renderHome(){
 
   const chipsBox = wrap.querySelector('#chips');
   chipsBox.innerHTML = '';
-  activeToday.slice(0,6).forEach(c=>{
+  todayList.slice(0,6).forEach(c=>{
     const pill=document.createElement('button');
     pill.className='chip '+(c.acc<50?'bad':c.acc<80?'warn':'good');
     pill.textContent=`${c.front} • ${c.acc}%`;
@@ -482,13 +501,14 @@ async function renderHome(){
   });
 
   const tbody = wrap.querySelector('#progressBody');
-  let baseList = enriched;
+  let baseList = todayList;
   const renderRows = (filter='today',q='')=>{
-    if(filter==='All') baseList = enriched;
+    if(filter==='today') baseList = todayList;
+    else if(filter==='All') baseList = enriched;
     else if(filter==='Struggling') baseList=enriched.filter(x=>x.status==='Struggling');
     else if(filter==='Needs review') baseList=enriched.filter(x=>x.status==='Needs review');
     else if(filter==='Mastered') baseList=enriched.filter(x=>x.status==='Mastered');
-    else baseList=reviewList;
+    else baseList = enriched;
     const qlc=q.trim().toLowerCase();
     const list=baseList.filter(r=>!qlc || r.front.toLowerCase().includes(qlc) || r.back.toLowerCase().includes(qlc));
     tbody.innerHTML='';
@@ -529,6 +549,13 @@ async function renderHome(){
   renderRows();
   return wrap;
 }
+
+window.addEventListener('fc:progress-updated', () => {
+  if (location.hash === '' || location.hash === '#/' || location.hash === '#/home') {
+    const view = document.getElementById('view');
+    renderHome().then(el => view.replaceChildren(el));
+  }
+});
 
 /* ---------- stat tint helper ---------- */
 function colorStatCard(el,pct=50){

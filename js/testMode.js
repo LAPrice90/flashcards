@@ -9,10 +9,14 @@
     return map[id] || id || 'welsh_phrases_A1';
   }
 
-  const dk          = deckKeyFromState();
-  const progressKey = 'progress_' + dk;          // read/write here
-  const dailyKey    = 'np_daily_' + dk;          // read in Test/Study; read/write in New Phrases
-  const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchanged)
+const dk          = deckKeyFromState();
+const progressKey = 'progress_' + dk;          // read/write here
+const dailyKey    = 'np_daily_' + dk;          // read in Test/Study; read/write in New Phrases
+const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchanged)
+
+function fireProgressEvent(payload){
+  window.dispatchEvent(new CustomEvent('fc:progress-updated', { detail: payload || {} }));
+}
 
   (function migrateProgressIfNeeded(){
     const legacy = 'progress_' + ((window.STATE && STATE.activeDeckId) || '');
@@ -65,7 +69,9 @@
 
   /* ---------- Small helpers ---------- */
   function todayKey() {
-    return new Date().toISOString().slice(0, 10);
+    const d = new Date();
+    d.setHours(0,0,0,0);
+    return d.toISOString().slice(0,10);
   }
 
   function getDayNumber() {
@@ -142,7 +148,8 @@
 
   /* ---------- Data loading ---------- */
   async function buildActiveDeck() {
-    const deck = await loadDeckSorted(dk);
+    const rows = await loadDeckSorted(dk);
+    const deck = rows.map(r => ({ id: r.id, front: r.front, back: r.back, unit: r.unit, section: r.section, card: r.card }));
     const seen = loadProgressSeen();
     const attempts = loadAttempts();
     const active = deck.filter(c => isActiveCard(c.id, seen, attempts));
@@ -179,6 +186,7 @@
     const val = container.querySelector('#tm-answer').value || '';
     const pass = !skip && equalsLoose(val, c.front);
     logAttempt(c.id, pass);
+    fireProgressEvent({ type:'attempt', id: c.id, pass });
     if (pass) correct++; else { wrong.push(c); }
     showResult(pass, val);
   }
@@ -233,9 +241,15 @@
     try {
       const active = await buildActiveDeck();
       if (!active.length) {
-        container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">No introduced cards. Use New Phrases first.</div></div>`;
+        container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">No introduced cards to test. Use New Phrases to unlock today’s set.</div></div>`;
         return;
       }
+      active.sort((a,b)=>{
+        const u=(a.unit||'').localeCompare(b.unit||''); if(u) return u;
+        const s=(parseInt(a.section,10)||0)-(parseInt(b.section,10)||0); if(s) return s;
+        const ca=parseInt(a.card,10)||0; const cb=parseInt(b.card,10)||0; if(ca!==cb) return ca-cb;
+        return (a.id||'').localeCompare(b.id||'');
+      });
       deck = shuffle(active);
       idx = 0; correct = 0; wrong = [];
       renderCard();
@@ -277,6 +291,7 @@
 
   window.addEventListener('DOMContentLoaded', mountIfTestRoute);
   window.addEventListener('hashchange', mountIfTestRoute);
+  window.addEventListener('fc:progress-updated', (e)=>{/* optional: update badges */});
 
   // If the Test route was loaded before this script executed, mount immediately.
   if (location.hash.startsWith('#/test')) {

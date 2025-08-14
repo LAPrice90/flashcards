@@ -14,6 +14,10 @@ const progressKey = 'progress_' + dk;          // read/write here
 const dailyKey    = 'np_daily_' + dk;          // read in Test/Study; read/write in New Phrases
 const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchanged)
 
+function fireProgressEvent(payload){
+  window.dispatchEvent(new CustomEvent('fc:progress-updated', { detail: payload || {} }));
+}
+
 
 (function migrateProgressIfNeeded(){
   const legacy = 'progress_' + ((window.STATE && STATE.activeDeckId) || '');
@@ -79,18 +83,23 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
 
   /* ---------- Progress helpers ---------- */
   function markSeenNow(cardId){
-    const pk = progressKey;
-    const prog = JSON.parse(localStorage.getItem(pk) || '{"seen":{}}');
+    const today = new Date().toISOString().slice(0,10);
+    const prog = JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}');
     if (!prog.seen) prog.seen = {};
-    const today = (new Date()).toISOString().slice(0,10);
     const entry = prog.seen[cardId] || { firstSeen: today, seenCount: 0 };
     entry.seenCount += 1;
     entry.lastSeen = today;
     prog.seen[cardId] = entry;
-    localStorage.setItem(pk, JSON.stringify(prog));
-    window.fcSaveCloud && window.fcSaveCloud();
+    localStorage.setItem(progressKey, JSON.stringify(prog));
   }
 
+  function bumpDailyUsed(){
+    const daily = JSON.parse(localStorage.getItem(dailyKey) || '{}');
+    if (daily && daily.date){
+      daily.used = Math.min((daily.used||0)+1, daily.allowed||0);
+      localStorage.setItem(dailyKey, JSON.stringify(daily));
+    }
+  }
 
   function canUnlock(allMastered){
     if(allMastered) return true;
@@ -227,7 +236,7 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
     unseenCards.sort(sortByCourseOrder);
 
     // 3) Get today’s allowance (fresh each day)
-    const daily = getDailyNewAllowance(deckId, unseenCards.length, allMastered);
+    const daily = getDailyNewAllowance(deckId, 0, unseenCards.length);
     console.log('[daily]', deckKeyFromState(), daily);
 
     // 4) Fresh queue for today only (no carry-over)
@@ -355,14 +364,14 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
         const ok=equalsLoose(inp.value||'', c.front);
         if(ok){
           markSeenNow(c.id);
+          bumpDailyUsed();
+          window.fcSaveCloud && window.fcSaveCloud();
+          fireProgressEvent({ type: 'introduced', id: c.id });
           const deckId = dk;
           const prog = loadProgress(deckId);
           syncProgressToGitHub(deckId,prog); initDeckPicker && initDeckPicker();
           queue.splice(idx,1);
           const daily = JSON.parse(localStorage.getItem(dailyKey) || '{}');
-          daily.used = Math.min((daily.used || 0) + 1, daily.allowed || 0);
-          localStorage.setItem(dailyKey, JSON.stringify(daily));
-          window.fcSaveCloud && window.fcSaveCloud();
           console.log('[daily]', deckKeyFromState(), daily);
           viewEl.innerHTML=`
             <div class="tm-result tm-correct">✓ Correct</div>
