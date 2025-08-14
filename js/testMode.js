@@ -190,6 +190,15 @@ function fireProgressEvent(payload){
     return active;
   }
 
+  async function buildPracticeDeck() {
+    const rows = await loadDeckSorted(dk);
+    const deck = rows.map(r => ({ id: r.id, front: r.front, back: r.back, unit: r.unit, section: r.section, card: r.card }));
+    const seen = loadProgressSeen();
+    const attempts = loadAttempts();
+    const active = deck.filter(c => isActiveCard(c.id, seen, attempts));
+    return active;
+  }
+
   async function checkPracticeUnlock() {
     const btn = document.getElementById('practiceToggle');
     const hint = document.getElementById('practiceHint');
@@ -384,10 +393,20 @@ function fireProgressEvent(payload){
   async function start() {
     container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">Loading…</div></div>`;
     try {
-      const active = await buildActiveDeck();
+      let active = await buildActiveDeck();
       if (!active.length) {
-        container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">No introduced cards to test. Use New Phrases to unlock today’s set.</div></div>`;
-        return;
+        const params = new URLSearchParams(location.hash.split('?')[1] || '');
+        const urlPractice = params.get('practice') === '1' || params.get('practice') === 'true';
+        if (urlPractice) {
+          active = await buildPracticeDeck();
+          if (!active.length) {
+            container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">No cards available for practice.</div></div>`;
+            return;
+          }
+        } else {
+          container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">No introduced cards to test. Use New Phrases to unlock today’s set.</div></div>`;
+          return;
+        }
       }
       active.sort((a,b)=>{
         const u=(a.unit||'').localeCompare(b.unit||''); if(u) return u;
