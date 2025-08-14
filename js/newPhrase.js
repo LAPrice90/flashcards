@@ -128,8 +128,8 @@ function fireProgressEvent(payload){
   }
 
   async function syncProgressToGitHub(deckId, prog){
-    const token = localStorage.getItem('gh_token');
-    const repo  = localStorage.getItem('gh_repo'); // format: owner/repo
+    const token = sessionStorage.getItem('gh_token');
+    const repo  = sessionStorage.getItem('gh_repo'); // format: owner/repo
     if(!token || !repo) return;
     const path = `progress_${deckId}.json`;
     const content = btoa(unescape(encodeURIComponent(JSON.stringify(prog))));

@@ -70,24 +70,27 @@
 
   <script>
     (function () {
-      window.addEventListener('error', function (e) {
-        var box = document.getElementById('errbox');
-        if (!box) {
-          box = document.createElement('div');
-          box.id = 'errbox';
-          box.style.position = 'fixed';
-          box.style.left = '0';
-          box.style.right = '0';
-          box.style.bottom = '0';
-          box.style.background = 'rgba(200,0,0,0.9)';
-          box.style.color = '#fff';
-          box.style.font = '12px/1.4 system-ui, sans-serif';
-          box.style.padding = '8px 12px';
-          box.style.zIndex = '99999';
-          document.body.appendChild(box);
-        }
-        box.textContent = '[JS Error] ' + e.message + ' @ ' + (e.filename || '') + ':' + (e.lineno || '');
-      });
+      var devHosts = ['localhost', '127.0.0.1'];
+      if (devHosts.includes(location.hostname)) {
+        window.addEventListener('error', function (e) {
+          var box = document.getElementById('errbox');
+          if (!box) {
+            box = document.createElement('div');
+            box.id = 'errbox';
+            box.style.position = 'fixed';
+            box.style.left = '0';
+            box.style.right = '0';
+            box.style.bottom = '0';
+            box.style.background = 'rgba(200,0,0,0.9)';
+            box.style.color = '#fff';
+            box.style.font = '12px/1.4 system-ui, sans-serif';
+            box.style.padding = '8px 12px';
+            box.style.zIndex = '99999';
+            document.body.appendChild(box);
+          }
+          box.textContent = '[JS Error] ' + e.message + ' @ ' + (e.filename || '') + ':' + (e.lineno || '');
+        });
+      }
     })();
   </script>
 
@@ -98,17 +101,7 @@
       getRedirectResult, signOut, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
-
-    // --- Your config (from Firebase) ---
-    const firebaseConfig = {
-      apiKey: "AIzaSyAChauzqXrxR96_YMt0SJs2ygk9FQ6FpwU",
-      authDomain: "flashcards-app-2f89e.firebaseapp.com",
-      projectId: "flashcards-app-2f89e",
-      storageBucket: "flashcards-app-2f89e.firebasestorage.app",
-      messagingSenderId: "886681573920",
-      appId: "1:886681573920:web:65a3133bbbadfa645dfa45",
-      measurementId: "G-3JK7388FG1"
-    };
+    import { firebaseConfig } from "./js/firebase-config.js";
 
     // --- Init ---
     const app  = initializeApp(firebaseConfig);
