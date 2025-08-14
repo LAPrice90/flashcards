@@ -14,42 +14,6 @@ const progressKey = 'progress_' + dk;          // read/write here
 const dailyKey    = 'np_daily_' + dk;          // read in Test/Study; read/write in New Phrases
 const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchanged)
 
-(function () {
-  function showPanel(id) {
-    document.querySelectorAll('[data-panel]').forEach(p => p.hidden = true);
-    var panel = document.querySelector(id);
-    if (panel) panel.hidden = false;
-  }
-  function openNewPhrasesView() {
-    console.log('[route] newPhrase');
-    showPanel('#panel-new-phrases');
-    if (typeof window.renderNewPhrase === 'function') {
-      window.renderNewPhrase();
-    }
-  }
-  function bind() {
-    var btn = document.querySelector('#new-phrases, [data-nav="new-phrases"], .js-new-phrases');
-    if (btn) {
-      btn.addEventListener('click', function (e) {
-        e.preventDefault();
-        openNewPhrasesView();
-        location.hash = '#/newPhrase';
-      });
-    } else {
-      console.warn('[newPhrase] button not found');
-    }
-    window.addEventListener('hashchange', function () {
-      if (location.hash === '#/newPhrase') openNewPhrasesView();
-    });
-    if (location.hash === '#/newPhrase') openNewPhrasesView();
-  }
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', bind);
-  } else {
-    bind();
-  }
-  window.openNewPhrasesView = openNewPhrasesView;
-})();
 
 (function migrateProgressIfNeeded(){
   const legacy = 'progress_' + ((window.STATE && STATE.activeDeckId) || '');
