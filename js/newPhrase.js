@@ -254,14 +254,9 @@ const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchan
         const toUnlock = unseenCards.sort(sortByCourseOrder)
                                     .slice(0, daily.allowed - daily.used);
 
-        const today = (new Date()).toISOString().slice(0, 10);
-        toUnlock.forEach(card => {
-          prog.seen[card.id] = { firstSeen: today, lastSeen: today, seenCount: 0 };
-          queue.push(card);
-        });
-        daily.used += toUnlock.length;
-        saveProgress(deckId, prog);
-        saveNewDaily(deckId, daily);
+        // Do NOT mark progress or increment daily here.
+        // Just queue them for today.
+        toUnlock.forEach(card => queue.push(card));
       }
 
 
