@@ -183,9 +183,18 @@ async function renderReview(query) {
     const isDetail = (STATE.viewMode === 'detail');
 
     // image
-    imgEl.innerHTML = c.image
-      ? `<img src="${c.image}" alt="${c.front}">`
-      : `<div class="no-image muted">No image</div>`;
+    imgEl.innerHTML = '';
+    if (c.image) {
+      const img = document.createElement('img');
+      img.src = c.image;
+      img.alt = c.front;
+      imgEl.appendChild(img);
+    } else {
+      const div = document.createElement('div');
+      div.className = 'no-image muted';
+      div.textContent = 'No image';
+      imgEl.appendChild(div);
+    }
 
     // phrase + phonetic
     if (isDetail) {
