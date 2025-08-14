@@ -473,8 +473,7 @@ async function renderHome(){
   wrap.querySelector('#btn-review').addEventListener('click', () => go('review'));
   // was: ()=>location.hash='#/newPhrase'
   wrap.querySelector('#btn-new').addEventListener('click', () => go('newPhrase'));
-  // was: ()=>location.hash='#/test'
-  wrap.querySelector('#btn-test').addEventListener('click', () => go('test'));
+  // test button handler added after queue count is known
 
 
   const rows = await loadDeckRows(deckId);
@@ -515,6 +514,18 @@ async function renderHome(){
 
   const testCount = await fcGetTestQueueCount();
 
+  const testBtn = wrap.querySelector('#btn-test');
+  const testTitle = wrap.querySelector('#stat-test .title');
+  if (testCount > 0) {
+    testTitle.textContent = 'Test Queue';
+    testBtn.textContent = 'Start Test';
+    testBtn.addEventListener('click', () => go('test'));
+  } else {
+    testTitle.textContent = 'Practice';
+    testBtn.textContent = 'Practice (free retest)';
+    testBtn.addEventListener('click', () => go('test?practice=1'));
+  }
+
   wrap.querySelector('#stat-review-num').textContent = reviewDue;
   wrap.querySelector('#stat-new-num').textContent = newToday;
   wrap.querySelector('#stat-test-num').textContent = testCount;
@@ -543,11 +554,16 @@ async function renderHome(){
     ctaSub.textContent = `Mastered: ${masteredCount}. Keep the momentum.`;
     ctaBtn.textContent = 'Review now';
     ctaBtn.onclick = () => go('test');
-  } else {
+  } else if (testCount > 0) {
     ctaTitle.textContent = '🧪 Test Mode';
     ctaSub.textContent = 'Quick checks keep recall sharp.';
     ctaBtn.textContent = 'Start test';
     ctaBtn.onclick = () => go('test');
+  } else {
+    ctaTitle.textContent = '📝 Practice';
+    ctaSub.textContent = 'Retest without affecting confidence.';
+    ctaBtn.textContent = 'Practice (free retest)';
+    ctaBtn.onclick = () => go('test?practice=1');
   }
 
   const chipsBox = wrap.querySelector('#chips');
