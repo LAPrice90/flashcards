@@ -153,6 +153,12 @@ function initMobileMenu() {
 
   btn.addEventListener('click', () => side.classList.toggle('open'));
 
+  document.addEventListener('click', (e) => {
+    if (!side.contains(e.target) && e.target !== btn && side.classList.contains('open')) {
+      side.classList.remove('open');
+    }
+  });
+
   document.querySelectorAll('.nav a').forEach(a =>
     a.addEventListener('click', (e) => {
       e.preventDefault();
