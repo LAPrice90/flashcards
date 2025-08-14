@@ -82,6 +82,7 @@ function fireProgressEvent(payload){
   let idx = 0;
   let correct = 0;
   let wrong = [];
+  let practiceMode = false;
 
   /* ---------- Small helpers ---------- */
   function todayKey() {
@@ -174,6 +175,31 @@ function fireProgressEvent(payload){
     return active;
   }
 
+  async function isDeckComplete() {
+    const rows = await loadDeckSorted(dk);
+    const attempts = loadAttempts();
+    return rows.every(r => {
+      const arr = attempts[r.id] || [];
+      return arr.some(a => a.pass && a.score !== false);
+    });
+  }
+
+  async function checkPracticeUnlock() {
+    const btn = document.getElementById('practiceToggle');
+    const hint = document.getElementById('practiceHint');
+    if (!btn) return;
+    const ok = await isDeckComplete();
+    btn.disabled = !ok;
+    if (hint) hint.style.display = ok ? 'none' : '';
+  }
+
+  function updatePracticeUI() {
+    const banner = document.getElementById('practiceBanner');
+    const btn = document.getElementById('practiceToggle');
+    if (banner) banner.style.display = practiceMode ? '' : 'none';
+    if (btn) btn.classList.toggle('active', practiceMode);
+  }
+
   /* ---------- Rendering ---------- */
   function renderCard() {
     const c = deck[idx];
@@ -201,7 +227,7 @@ function fireProgressEvent(payload){
     const c = deck[idx];
     const val = container.querySelector('#tm-answer').value || '';
     const pass = !skip && equalsLoose(val, c.front);
-    logAttempt(c.id, pass);
+    logAttempt(c.id, pass, { forceNoScore: practiceMode });
     fireProgressEvent({ type:'attempt', id: c.id, pass });
     if (pass) {
       correct++;
@@ -261,7 +287,7 @@ function fireProgressEvent(payload){
       function submit(){
         const val = inp.value || '';
         const ok = equalsLoose(val, card.front);
-        const counted = logAttempt(card.id, ok) ;
+        const counted = logAttempt(card.id, ok, { forceNoScore: practiceMode });
         fireProgressEvent({ type:'attempt', id: card.id, pass: ok });
         if (ok) {
           showResult(true, val, { scoreCounted: counted });
@@ -284,7 +310,7 @@ function fireProgressEvent(payload){
     let resultHtml = '';
     if (pass) {
       resultHtml = '<div class="tm-result tm-correct">✓ Correct</div>';
-      if (opts && opts.scoreCounted === false) {
+      if (opts && opts.scoreCounted === false && !practiceMode) {
         resultHtml += '<div class="tm-label">Confidence unchanged (1h cooldown)</div>';
       }
     } else {
@@ -377,6 +403,18 @@ function fireProgressEvent(payload){
     container = document.getElementById('test-container');
     if (!container) { setTimeout(mountIfTestRoute, 0); return; }
 
+    practiceMode = false;
+    updatePracticeUI();
+    const pBtn = document.getElementById('practiceToggle');
+    if (pBtn) {
+      pBtn.addEventListener('click', () => {
+        if (pBtn.disabled) return;
+        practiceMode = !practiceMode;
+        updatePracticeUI();
+      });
+    }
+    checkPracticeUnlock();
+
     const sec = container.parentElement; // section
     if (!document.getElementById('tm-day')) {
       const dayEl = document.createElement('div');
@@ -394,7 +432,7 @@ function fireProgressEvent(payload){
 
   window.addEventListener('DOMContentLoaded', mountIfTestRoute);
   window.addEventListener('hashchange', mountIfTestRoute);
-  window.addEventListener('fc:progress-updated', (e)=>{/* optional: update badges */});
+  window.addEventListener('fc:progress-updated', () => { checkPracticeUnlock(); });
 
   // If the Test route was loaded before this script executed, mount immediately.
   if (location.hash.startsWith('#/test')) {
@@ -417,6 +455,8 @@ function fireProgressEvent(payload){
     .btn.big{padding:12px 18px;font-weight:700;}
     .btn.link{background:transparent;border:none;text-decoration:underline;padding:0;}
     .btn.link.danger{color:#ff6b6b;font-size:12px;}
+    .practice-badge{background:#555;padding:2px 6px;border-radius:4px;font-size:12px;font-weight:700;margin-right:6px;}
+    .practice-banner{padding:8px 12px;border:1px solid var(--border);border-radius:8px;}
   `;
   document.head.appendChild(style);
 })();
