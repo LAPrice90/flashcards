@@ -287,6 +287,31 @@ async function loadDeckRows(deckId){
   return rows;
 }
 
+async function fcGetTestQueueCount(){
+  const dk = deckKeyFromState();
+  const rows = await loadDeckRows(dk);
+  const prog = loadProgress(dk);
+  const attempts = loadAttemptsMap();
+  const seen = prog.seen || {};
+  const activeRows = rows.filter(r => seen[r.id] || (attempts[r.id] && attempts[r.id].length > 0));
+  const session = (()=>{ try{ return JSON.parse(localStorage.getItem(LS_TEST_SESSION) || '{}'); } catch{ return {}; } })();
+  const doneSet = new Set(session.done || []);
+  const now = Date.now();
+  return activeRows.filter(r=>{
+    if(doneSet.has(r.id)) return false;
+    const arr = attempts[r.id] || [];
+    for(let i=arr.length-1;i>=0;i--){
+      const a=arr[i];
+      if(a.pass){
+        if(now - a.ts < SCORE_COOLDOWN_MS) return false;
+        break;
+      }
+    }
+    return true;
+  }).length;
+}
+window.fcGetTestQueueCount = fcGetTestQueueCount;
+
 function getDailyNewAllowance(deckId, strugglingCount, unseenCount){
   const key = todayKey();
   let st = loadNewDaily(deckId);
@@ -470,7 +495,6 @@ async function renderHome(){
   const needsCount      = enriched.filter(x=>x.status==='Needs review').length;
   const masteredCount   = enriched.filter(x=>x.status==='Mastered').length;
   const reviewDue = strugglingCount + needsCount;
-  const allMastered = enriched.length > 0 && reviewDue === 0;
   getDailyNewAllowance(deckId, strugglingCount, unseenCount);
   const daily2 = JSON.parse(localStorage.getItem(dailyKey) || '{}');
   const newToday = Math.max(0, (daily2.allowed || 0) - (daily2.used || 0));
@@ -490,21 +514,7 @@ async function renderHome(){
     }
   }
 
-  const session = (()=>{ try{ return JSON.parse(localStorage.getItem(LS_TEST_SESSION) || '{}'); } catch{ return {}; } })();
-  const doneSet = new Set(session.done || []);
-  const now = Date.now();
-  const testCount = activeRows.filter(r => {
-    if(doneSet.has(r.id)) return false;
-    const arr = attempts[r.id] || [];
-    for(let i=arr.length-1;i>=0;i--){
-      const a=arr[i];
-      if(a.pass){
-        if(now - a.ts < SCORE_COOLDOWN_MS) return false;
-        break;
-      }
-    }
-    return true;
-  }).length;
+  const testCount = await fcGetTestQueueCount();
 
   wrap.querySelector('#stat-review-num').textContent = reviewDue;
   wrap.querySelector('#stat-new-num').textContent = newToday;
