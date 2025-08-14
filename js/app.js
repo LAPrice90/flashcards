@@ -345,13 +345,6 @@ function renderTestShell(){
   const wrap=document.createElement('div');
   wrap.innerHTML = `
     <h1 class="h1">Test Mode</h1>
-    <div class="practice-toggle" id="practiceWrap" style="margin-bottom:8px;">
-      <button class="btn" id="practiceToggle" disabled>Practice (free retest)</button>
-      <div class="muted" id="practiceHint" style="margin-top:4px;">Finish all quizzes to unlock practice.</div>
-    </div>
-    <div class="practice-banner muted" id="practiceBanner" style="display:none; text-align:center; margin-bottom:8px;">
-      <span class="practice-badge">Practice</span> Practice mode — answers won’t affect confidence.
-    </div>
     <section class="card card--center"><div id="test-container"></div></section>`;
   return wrap;
 }
