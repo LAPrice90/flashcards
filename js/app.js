@@ -485,7 +485,8 @@ async function renderHome(){
   const enriched = activeRows.map(r=>{
     const arr = (attempts[r.id] || []).filter(a => a.score !== false);
     const acc = lastNAccuracy(r.id,SCORE_WINDOW,attempts);
-    const status = categoryFromPct(acc);
+    let status = categoryFromPct(acc);
+    if (arr.length < 10) status = 'Learning';
     return {...r, acc, status, lastCount: arr.slice(-SCORE_WINDOW).length};
   });
 
@@ -504,10 +505,11 @@ async function renderHome(){
     if(seen[r.id] || (attempts[r.id] && attempts[r.id].length > 0)){
       const arr = (attempts[r.id] || []).filter(a => a.score !== false);
       const acc = lastNAccuracy(r.id,SCORE_WINDOW,attempts);
-      const status = categoryFromPct(acc);
+      let status = categoryFromPct(acc);
+      if (arr.length < 10) status = 'Learning';
       todayList.push({...r, acc, status, lastCount: arr.slice(-SCORE_WINDOW).length});
     } else if(newRemaining > 0){
-      todayList.push({...r, acc:0, status:'Unseen', lastCount:0});
+      todayList.push({...r, acc:0, status:'New Word', lastCount:0});
       newRemaining--;
     }
   }
