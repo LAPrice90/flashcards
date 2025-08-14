@@ -199,7 +199,9 @@ function loadAttemptsMap(){
   catch { return {}; }
 }
 function lastNAccuracy(cardId,n=SCORE_WINDOW,map=loadAttemptsMap()){
-  const arr = (map[cardId] || []).slice(-n);
+  const raw = map[cardId] || [];
+  const scored = raw.filter(a => a.score !== false);
+  const arr = scored.slice(-n);
   if (!arr.length) return 0;
   const p = arr.filter(a=>a.pass).length;
   return Math.round((p/arr.length)*100);
@@ -449,7 +451,7 @@ async function renderHome(){
   const unseenCount = unseenRows.length;
 
   const enriched = activeRows.map(r=>{
-    const arr = attempts[r.id] || [];
+    const arr = (attempts[r.id] || []).filter(a => a.score !== false);
     const acc = lastNAccuracy(r.id,SCORE_WINDOW,attempts);
     const status = categoryFromPct(acc);
     return {...r, acc, status, lastCount: arr.slice(-SCORE_WINDOW).length};
@@ -469,7 +471,7 @@ async function renderHome(){
   const todayList = [];
   for(const r of rows){
     if(seen[r.id] || (attempts[r.id] && attempts[r.id].length > 0)){
-      const arr = attempts[r.id] || [];
+      const arr = (attempts[r.id] || []).filter(a => a.score !== false);
       const acc = lastNAccuracy(r.id,SCORE_WINDOW,attempts);
       const status = categoryFromPct(acc);
       todayList.push({...r, acc, status, lastCount: arr.slice(-SCORE_WINDOW).length});
