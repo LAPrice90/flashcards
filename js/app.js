@@ -16,6 +16,8 @@ const LS_NEW_DAILY_PREFIX = 'np_daily_';
 const LS_ATTEMPTS_KEY = 'tm_attempts_v1';
 const LS_START_KEY = 'tm_start_date';
 const SCORE_WINDOW = 10;
+const LS_TEST_SESSION = 'tm_session';
+const SCORE_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
 
 function deckKeyFromState() {
   // Prefer the JSON filename stem already used by the fetch; fall back to STATE.activeDeckId.
@@ -488,7 +490,21 @@ async function renderHome(){
     }
   }
 
-  const testCount = activeRows.length;
+  const session = (()=>{ try{ return JSON.parse(localStorage.getItem(LS_TEST_SESSION) || '{}'); } catch{ return {}; } })();
+  const doneSet = new Set(session.done || []);
+  const now = Date.now();
+  const testCount = activeRows.filter(r => {
+    if(doneSet.has(r.id)) return false;
+    const arr = attempts[r.id] || [];
+    for(let i=arr.length-1;i>=0;i--){
+      const a=arr[i];
+      if(a.pass){
+        if(now - a.ts < SCORE_COOLDOWN_MS) return false;
+        break;
+      }
+    }
+    return true;
+  }).length;
 
   wrap.querySelector('#stat-review-num').textContent = reviewDue;
   wrap.querySelector('#stat-new-num').textContent = newToday;
@@ -588,6 +604,13 @@ async function renderHome(){
 
 window.addEventListener('fc:progress-updated', () => {
   if (location.hash === '' || location.hash === '#/' || location.hash === '#/home') {
+    const view = document.getElementById('view');
+    renderHome().then(el => view.replaceChildren(el));
+  }
+});
+
+window.addEventListener('visibilitychange', () => {
+  if (!document.hidden && (location.hash === '' || location.hash === '#/' || location.hash === '#/home')) {
     const view = document.getElementById('view');
     renderHome().then(el => view.replaceChildren(el));
   }

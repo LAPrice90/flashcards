@@ -200,6 +200,22 @@ function fireProgressEvent(payload){
     if (btn) btn.classList.toggle('active', practiceMode);
   }
 
+  /* ---------- Session tracking ---------- */
+  const SESSION_KEY = 'tm_session';
+
+  function resetSession(){
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ done: [] }));
+  }
+
+  function markSessionDone(id){
+    let obj;
+    try{ obj = JSON.parse(localStorage.getItem(SESSION_KEY) || '{}'); }
+    catch { obj = {}; }
+    if(!Array.isArray(obj.done)) obj.done = [];
+    if(!obj.done.includes(id)) obj.done.push(id);
+    localStorage.setItem(SESSION_KEY, JSON.stringify(obj));
+  }
+
   /* ---------- Rendering ---------- */
   function renderCard() {
     const c = deck[idx];
@@ -307,6 +323,8 @@ function fireProgressEvent(payload){
 
   function showResult(pass, userInput, opts) {
     const c = deck[idx];
+    markSessionDone(c.id);
+    fireProgressEvent({ type:'session-update', id: c.id });
     let resultHtml = '';
     if (pass) {
       resultHtml = '<div class="tm-result tm-correct">✓ Correct</div>';
@@ -381,6 +399,8 @@ function fireProgressEvent(payload){
       });
       deck = shuffle(active);
       idx = 0; correct = 0; wrong = [];
+      resetSession();
+      fireProgressEvent({ type:'session-reset' });
       renderCard();
     } catch (e) {
       console.error(e);
