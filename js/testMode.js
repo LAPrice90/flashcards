@@ -175,22 +175,15 @@ function fireProgressEvent(payload){
     return active;
   }
 
-  async function isDeckComplete() {
-    const rows = await loadDeckSorted(dk);
-    const attempts = loadAttempts();
-    return rows.every(r => {
-      const arr = attempts[r.id] || [];
-      return arr.some(a => a.pass && a.score !== false);
-    });
-  }
-
   async function checkPracticeUnlock() {
     const btn = document.getElementById('practiceToggle');
     const hint = document.getElementById('practiceHint');
     if (!btn) return;
-    const ok = await isDeckComplete();
-    btn.disabled = !ok;
-    if (hint) hint.style.display = ok ? 'none' : '';
+    const count = await (window.fcGetTestQueueCount ? window.fcGetTestQueueCount() : Promise.resolve(0));
+    const unlocked = count === 0;
+    btn.disabled = !unlocked;
+    btn.textContent = 'Practice (free retest)';
+    if (hint) hint.style.display = unlocked ? 'none' : '';
   }
 
   function updatePracticeUI() {
