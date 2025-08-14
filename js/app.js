@@ -516,12 +516,11 @@ async function renderHome(){
 
   const testBtn = wrap.querySelector('#btn-test');
   const testTitle = wrap.querySelector('#stat-test .title');
+  testTitle.textContent = 'Test Queue';
   if (testCount > 0) {
-    testTitle.textContent = 'Test Queue';
     testBtn.textContent = 'Start Test';
     testBtn.addEventListener('click', () => go('test'));
   } else {
-    testTitle.textContent = 'Practice';
     testBtn.textContent = 'Practice (free retest)';
     testBtn.addEventListener('click', () => go('test?practice=1'));
   }
