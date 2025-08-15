@@ -85,8 +85,6 @@ function fireProgressEvent(payload){
   // Test Mode – review only. Route: #/test
 
   /* ---------- Constants & state ---------- */
-  const LS_START_KEY = 'tm_start_date';
-
   let container = null;
   let deck = [];
   let idx = 0;
@@ -96,22 +94,6 @@ function fireProgressEvent(payload){
   let seenThisSession = new Set();
 
   /* ---------- Small helpers ---------- */
-  function todayKey() {
-    const d = new Date();
-    d.setHours(0,0,0,0);
-    return d.toISOString().slice(0,10);
-  }
-
-  function getDayNumber() {
-    const today = todayKey();
-    let start = localStorage.getItem(LS_START_KEY);
-    if (!start) {
-      localStorage.setItem(LS_START_KEY, today);
-      return 1;
-    }
-    const diff = Math.floor((new Date(today) - new Date(start)) / 86400000);
-    return diff + 1;
-  }
 
   function shuffle(arr) {
     const a = arr.slice();
@@ -276,6 +258,7 @@ function fireProgressEvent(payload){
     const c = deck[idx];
     const val = container.querySelector('#tm-answer').value || '';
     const pass = !skip && equalsLoose(val, c.front);
+    if (pass) tickDay();
     logAttempt(c.id, pass, { forceNoScore: practiceMode });
     fireProgressEvent({ type:'attempt', id: c.id, pass });
     if (pass) {
@@ -336,6 +319,7 @@ function fireProgressEvent(payload){
       function submit(){
         const val = inp.value || '';
         const ok = equalsLoose(val, card.front);
+        if (ok) tickDay();
         const counted = logAttempt(card.id, ok, { forceNoScore: practiceMode });
         fireProgressEvent({ type:'attempt', id: card.id, pass: ok });
         if (ok) {

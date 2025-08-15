@@ -52,18 +52,6 @@ function fireProgressEvent(payload){
       .replace(/\s+/g,' ').trim();
     return out;
   }
-  function currentDay(deckId){
-    const today = new Date();
-    today.setHours(0,0,0,0);
-    const todayKey = today.toISOString().slice(0,10);
-    const start = localStorage.getItem('tm_start_date');
-    if (!start) {
-      localStorage.setItem('tm_start_date', todayKey);
-      return 1;
-    }
-    const diff = Math.floor((new Date(todayKey) - new Date(start)) / 86400000);
-    return diff + 1;
-  }
   function levenshtein(a,b){
     const m=a.length,n=b.length; if(!m) return n; if(!n) return m;
     const prev=new Array(n+1),cur=new Array(n+1);
@@ -188,7 +176,7 @@ function fireProgressEvent(payload){
     viewEl=host.querySelector('#np-root');
 
     const deckId = dk;
-    host.querySelector('#np-day').textContent=currentDay(deckId);
+    host.querySelector('#np-day').textContent=getDayNumber();
 
     (function migrateDailyIfNeeded(){
       const canonical = dailyKey;
@@ -375,6 +363,7 @@ function fireProgressEvent(payload){
         if(ok){
           markSeenNow(c.id);
           bumpDailyUsed();
+          tickDay();
           window.fcSaveCloud && window.fcSaveCloud();
           fireProgressEvent({ type: 'introduced', id: c.id });
           const deckId = dk;
