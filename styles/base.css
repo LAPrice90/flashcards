@@ -79,22 +79,23 @@ body { background: var(--bg); color: var(--text); }
 .navbar{
   position: sticky; top: 0; z-index: 40;
   display: flex; align-items: center; justify-content: space-between;
-  gap: 16px; padding: 10px 16px;
+  gap: 16px; padding: 15px 16px;
   background: var(--welsh-green);
   border-bottom: none;
 }
 .nav-left{ display:flex; align-items:center; gap:8px; }
 .nav-right{ display:flex; align-items:center; gap:16px; }
 .brand.dragon{ font-weight: 800; letter-spacing:.2px; color: var(--welsh-red); }
-.brand.dragon img{ height:24px; }
+.brand.dragon img{ height:96px; }
 .nav-horizontal{ display:flex; gap:14px; }
 .nav-horizontal a{
   display:inline-flex; align-items:center; gap:8px;
   padding:10px 14px; border-radius:12px; text-decoration:none; color:inherit;
+  border:3px solid transparent;
 }
 .nav-horizontal a:hover,
 .nav-horizontal a.active{ background: rgba(209,17,28,0.12); }
-.nav-horizontal a.active{ box-shadow: inset 0 -2px 0 var(--welsh-green); }
+.nav-horizontal a.active{ box-shadow:none; border-color: var(--welsh-white); }
 .deck-select{
   background: var(--panel); color: var(--text);
   border: 1px solid var(--border); border-radius: 10px; padding: 8px 10px;
@@ -102,7 +103,7 @@ body { background: var(--bg); color: var(--text); }
 
 /* Mobile: show hamburger + drawer */
 .topbar { display: none; }
-.topbar-logo{ height:24px; justify-self:center; }
+.topbar-logo{ height:96px; justify-self:center; }
 .icon-btn {
   border: 1px solid var(--border);
   background: var(--panel);
@@ -118,7 +119,7 @@ body { background: var(--bg); color: var(--text); }
     position: sticky; top: 0; z-index: 30;
     background: var(--welsh-green);
     border-bottom: none;
-    padding: 10px 12px;
+    padding: 15px 12px;
   }
   .layout { grid-template-columns: 1fr; }
   .side {
@@ -145,7 +146,7 @@ body { background: #ffffff !important; color: #0f1117 !important; }
 /* Make top nav definitely horizontal with green background */
 .navbar { background: var(--welsh-green); border-bottom: none; }
 .navbar .nav-horizontal { display:flex !important; flex-direction: row !important; gap:14px; }
-.navbar .nav-horizontal a { color:#0f1117; text-decoration:none; }
+.navbar .nav-horizontal a { color: var(--welsh-white); font-weight:700; text-decoration:none; }
 .navbar .nav-horizontal a:hover,
 .navbar .nav-horizontal a.active { background: rgba(209,17,28,.12); box-shadow: none; }
 
