@@ -126,7 +126,7 @@ async function renderReview(query) {
         <div class="flashcard-actions">
           <button class="btn nav-btn" id="prevBtn">Previous</button>
           <button class="btn nav-btn" id="nextBtn">Next</button>
-          <a class="btn end-btn" href="#/home">End Session</a>
+          <a class="btn end-btn" href="#/phrases">End Session</a>
         </div>
 
         <div class="flashcard-progress muted" id="fcProg"></div>
