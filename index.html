@@ -16,7 +16,8 @@
   <!-- Desktop navbar -->
   <header class="navbar" role="banner">
     <div class="nav-left">
-      <div class="brand dragon">Draig</div>
+      <div class="brand dragon"><img src="media/image/welshlogo.png" alt="Draig logo"></div>
+      <select id="deckSelect" class="deck-select" aria-label="Switch deck"></select>
       <nav class="nav nav-horizontal" aria-label="Primary">
         <a href="#/home" data-route="home">Dashboard</a>
         <a href="#/newPhrase" data-route="newPhrase">Phrases</a>
@@ -24,15 +25,13 @@
         <a href="#/settings" data-route="settings">Settings</a>
       </nav>
     </div>
-    <div class="nav-right">
-      <select id="deckSelect" class="deck-select" aria-label="Switch deck"></select>
-    </div>
+    <div class="nav-right"></div>
   </header>
 
   <!-- Mobile topbar -->
   <header class="topbar">
     <button id="menuToggle" class="icon-btn" aria-label="Toggle menu">☰</button>
-    <div class="topbar-title">Draig</div>
+    <img src="media/image/welshlogo.png" alt="Draig logo" class="topbar-logo">
     <label class="toggle topbar-toggle" title="Light / Dark">
       <input type="checkbox" id="themeToggleTop" />
     </label>
@@ -145,18 +144,48 @@
     getRedirectResult(auth).then(async (res) => { if (res && res.user) await afterLogin(); }).catch(() => {});
 
     function ensureAuthUI() {
-      const host = document.querySelector(".side-footer") || document.body;
+      const host = document.querySelector(".nav-right") || document.querySelector(".side-footer") || document.body;
       let box = document.getElementById("authBox");
-      if (!box) { box = document.createElement("div"); box.id = "authBox"; box.style.display = "flex"; box.style.flexDirection = "column"; box.style.gap = "6px"; box.style.marginTop = "10px"; host.appendChild(box); }
-      if (!document.getElementById("authStatus")) { const s = document.createElement("div"); s.id = "authStatus"; s.className = "muted"; box.appendChild(s); }
-      if (!document.getElementById("authBtn")) { const b = document.createElement("button"); b.id = "authBtn"; b.className = "btn"; box.appendChild(b); }
+      if (!box) {
+        box = document.createElement("div");
+        box.id = "authBox";
+        box.style.display = "flex";
+        if (host.classList.contains("nav-right")) {
+          box.style.flexDirection = "row";
+          box.style.marginTop = "0";
+        } else {
+          box.style.flexDirection = "column";
+          box.style.marginTop = "10px";
+        }
+        box.style.gap = "6px";
+        host.appendChild(box);
+      }
+      if (!document.getElementById("authStatus") && !host.classList.contains("nav-right")) {
+        const s = document.createElement("div");
+        s.id = "authStatus";
+        s.className = "muted";
+        box.appendChild(s);
+      }
+      if (!document.getElementById("authBtn")) {
+        const b = document.createElement("button");
+        b.id = "authBtn";
+        b.className = "btn";
+        box.appendChild(b);
+      }
     }
     function renderAuthUI(user) {
       ensureAuthUI();
       const statusEl = document.getElementById("authStatus");
       const btn = document.getElementById("authBtn");
-      if (user) { statusEl.textContent = `Signed in as ${user.email}`; btn.textContent = "Sign out"; btn.onclick = signOutUser; }
-      else { statusEl.textContent = "Not signed in"; btn.textContent = "Sign in with Google"; btn.onclick = signInWithGoogle; }
+      if (user) {
+        if (statusEl) statusEl.textContent = `Signed in as ${user.email}`;
+        btn.textContent = "Sign out";
+        btn.onclick = signOutUser;
+      } else {
+        if (statusEl) statusEl.textContent = "Not signed in";
+        btn.textContent = "Sign in with Google";
+        btn.onclick = signInWithGoogle;
+      }
     }
     onAuthStateChanged(auth, (user) => renderAuthUI(user));
     document.addEventListener("DOMContentLoaded", () => renderAuthUI(auth.currentUser));
