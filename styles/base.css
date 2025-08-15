@@ -69,7 +69,8 @@ body { background: var(--bg); color: var(--text); }
 .btn:hover { border-color: var(--accent); }
 
 /* Layout: sidebar hidden on desktop */
-.layout { display: grid; grid-template-columns: 1fr; min-height: 100dvh; }
+/* Subtract navbar height to avoid extra page scroll */
+.layout { display: grid; grid-template-columns: 1fr; min-height: calc(100dvh - 64px); }
 .main { padding: 24px; }
 .side { display: none; } /* default: hidden */
 
@@ -118,7 +119,7 @@ body { background: var(--bg); color: var(--text); }
     border-bottom: 1px solid var(--border);
     padding: 10px 12px;
   }
-  .layout { grid-template-columns: 1fr; }
+  .layout { grid-template-columns: 1fr; min-height: calc(100dvh - 56px); }
   .side {
     display:block;
     position: fixed; inset: 56px 0 auto 0;
