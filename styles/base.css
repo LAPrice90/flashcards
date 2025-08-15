@@ -30,18 +30,6 @@ body {
   --shadow: 0 8px 24px rgba(16,24,40,.08);
 }
 
-/* Dark (optional toggle) */
-body[data-theme="dark"] {
-  --bg: #0f1117;
-  --panel: #161a23;
-  --panel-2: #121723;
-  --text: #e9edf1;
-  --muted: #a3aab4;
-  --border: #252b36;
-  --accent: var(--welsh-red);
-  --green: var(--welsh-green);
-  --shadow: 0 20px 40px rgba(0,0,0,.35);
-}
 
 /* Base */
 body { background: var(--bg); color: var(--text); }
@@ -240,5 +228,3 @@ body { background: #ffffff !important; color: #0f1117 !important; }
 /* Panels: dark text on white */
 .panel-white, .card, .action-card, .stats-card { background:#fff; color:#0f1117; }
 
-/* Hide any theme toggles so the UI stays uniform */
-.topbar-toggle, #themeToggleTop, #themeToggle { display:none !important; }
