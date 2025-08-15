@@ -5,9 +5,26 @@
 @media (max-width: 920px){ .duo-layout{ grid-template-columns: 1fr; } }
 
 .skills-grid{
-  display:grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr));
+  display:grid;
+  justify-content:center;
+}
+.skills-grid.grid-3{
+  grid-template-columns: repeat(3,160px);
   gap:28px; align-items:start;
 }
+.skills-grid.grid-2{
+  grid-template-columns: repeat(2,160px);
+  gap:16px; align-items:start;
+}
+
+.skills-wrap{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height: calc(100vh - 200px);
+}
+
+.stat-card{ text-align:center; }
 
 .skill{ text-align:center; text-decoration:none; color:inherit; user-select:none; }
 .skill .bubble{
@@ -35,7 +52,7 @@
 /* Right sidebar */
 .sidebar{ display:grid; gap:16px; }
 .panel-white{
-  background:#fff; border:1px solid var(--border); border-radius:16px;
+  background:#fff; border:1px solid var(--welsh-green); border-radius:16px;
   padding:16px; box-shadow: var(--shadow);
 }
 .panel-title{ font-weight:800; margin-bottom:8px; }
@@ -56,3 +73,9 @@
   box-shadow: inset 0 1px 0 rgba(0,0,0,.04);
 }
 .progress > i{ display:block; height:100%; width: var(--w, 0%); background: var(--welsh-red); }
+
+/* Learned phrases table */
+.phrase-table{ width:100%; border-collapse:collapse; margin-top:16px; font-size:14px; }
+.phrase-table th, .phrase-table td{ padding:8px 10px; border-bottom:1px solid var(--border); text-align:left; }
+.phrase-table th{ background: var(--panel-2); font-weight:700; }
+.phrase-table td.actions{ display:flex; gap:6px; }

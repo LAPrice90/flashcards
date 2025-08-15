@@ -410,11 +410,15 @@ function fireProgressEvent(payload){
     resetSession();
     container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">Loading…</div></div>`;
     try {
+      const params = new URLSearchParams(location.hash.split('?')[1] || '');
+      const single = params.get('card');
       let active = await buildActiveDeck();
+      if (single) {
+        active = active.filter(c => c.id === single);
+      }
       if (!active.length) {
-        const params = new URLSearchParams(location.hash.split('?')[1] || '');
         const urlPractice = params.get('practice') === '1' || params.get('practice') === 'true';
-        if (urlPractice) {
+        if (!single && urlPractice) {
           active = await buildPracticeDeck();
           if (!active.length) {
             container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">No cards available for practice.</div></div>`;

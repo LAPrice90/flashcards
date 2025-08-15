@@ -109,11 +109,18 @@ function escapeHTML(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;',
 /* ---------- Router ---------- */
 const routes = {
   home: renderHome,
+  phrases: renderPhraseDashboard,
+  words: renderComingSoon('Words'),
+  songs: renderComingSoon('Songs'),
+  stories: renderComingSoon('Stories'),
+  conversations: renderComingSoon('Conversations'),
+  challenges: renderComingSoon('Challenges'),
   review: renderReview,
-  decks: renderDecks,
+  decks: renderComingSoon('Custom Phrases'),
+  learned: renderLearned,
   add: renderPlaceholder('Add Cards'),
   stats: renderPlaceholder('Stats'),
-  settings: renderPlaceholder('Settings'),
+  settings: renderSettings,
   test: renderTestShell,
   newPhrase: () => window.renderNewPhrase ? window.renderNewPhrase() : document.createElement('div')
 };
@@ -121,7 +128,7 @@ const routes = {
 async function render() {
   const [route, query] = parseHash();                 // ✅ read current route
   document.querySelectorAll('.nav a').forEach(a =>
-    a.classList.toggle('active', a.dataset.route === route)
+    a.classList.toggle('active', a.dataset.route === route || (route === 'phrases' && a.dataset.route === 'home'))
   );
 
   const el = document.getElementById('view');
@@ -340,32 +347,88 @@ function renderTestShell(){
     <section class="card card--center"><div id="test-container"></div></section>`;
   return wrap;
 }
-function renderDecks(){
-  const wrap=document.createElement('div');
-  wrap.innerHTML=`<h1 class="h1">Decks</h1>`;
-  const list=document.createElement('div');
-  list.className='row';
-  DECKS.forEach(d=>{
-    const prog=loadProgress(d.id);
-    const count=Object.keys(prog.seen||{}).length;
-    const card=document.createElement('div');
-    card.className='card';
-    card.style.minWidth='260px';
-    card.innerHTML=`
+function renderSettings(){
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `<h1 class="h1">Settings</h1>`;
+
+  const sub = document.createElement('h2');
+  sub.className = 'h2';
+  sub.textContent = 'Deck Options';
+  wrap.appendChild(sub);
+
+  const list = document.createElement('div');
+  list.className = 'row';
+  DECKS.forEach(d => {
+    const prog = loadProgress(d.id);
+    const count = Object.keys(prog.seen || {}).length;
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.minWidth = '260px';
+    card.innerHTML = `
       <div style="font-weight:700">${d.name}</div>
       <div class="muted">${count} active</div>
       <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn">Set Active</button>
         <a class="btn" href="#/review?mode=quiz&deck=${d.id}">Review</a>
       </div>`;
-    card.querySelector('button').addEventListener('click',()=>setActiveDeck(d.id));
+    card.querySelector('button').addEventListener('click', () => setActiveDeck(d.id));
     list.appendChild(card);
   });
   wrap.appendChild(list);
   return wrap;
 }
+
+async function renderLearned(){
+  const dk = deckKeyFromState();
+  const deckId = dk;
+  const rows = await loadDeckRows(deckId);
+  const prog = loadProgress(deckId);
+  const attempts = loadAttemptsMap();
+  const seen = prog.seen || {};
+  const activeRows = rows.filter(r=>seen[r.id] || (attempts[r.id] && attempts[r.id].length));
+
+  const data = activeRows.map(r=>{
+    const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
+    const status = acc >= 80 ? 'Mastered' : 'Needs review';
+    const tries = (attempts[r.id]||[]).length;
+    return { ...r, acc, status, tries };
+  });
+
+  const wrap=document.createElement('div');
+  wrap.innerHTML = `<h1 class="h1">Learned Phrases</h1>`;
+  const table=document.createElement('table');
+  table.className='phrase-table';
+  table.innerHTML=`<thead><tr>
+    <th>Phrase (Welsh)</th>
+    <th>Meaning (English)</th>
+    <th>Status</th>
+    <th>Accuracy</th>
+    <th>Last attempts</th>
+    <th>Tags</th>
+    <th>Actions</th>
+  </tr></thead><tbody></tbody>`;
+  const tbody=table.querySelector('tbody');
+  data.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${escapeHTML(r.front)}</td>
+      <td>${escapeHTML(r.back)}</td>
+      <td>${r.status}</td>
+      <td><div class="progress"><i style="--w:${r.acc}%"></i></div> ${r.acc}%</td>
+      <td>${r.tries}</td>
+      <td>${escapeHTML(r.tags)}</td>
+      <td class="actions"><a class="btn" href="#/review?card=${encodeURIComponent(r.id)}">Study</a> <a class="btn" href="#/test?card=${encodeURIComponent(r.id)}">Test</a></td>`;
+    tbody.appendChild(tr);
+  });
+  wrap.appendChild(table);
+  return wrap;
+}
 function renderPlaceholder(title){
   return ()=>{const div=document.createElement('div');div.innerHTML=`<h1 class="h1">${title}</h1>`;return div;};
+}
+
+function renderComingSoon(title){
+  return ()=>{const div=document.createElement('div');div.innerHTML=`<h1 class="h1">${title}</h1><p>Coming soon</p>`;return div;};
 }
 
 function go(route){
@@ -379,8 +442,82 @@ function go(route){
 
 
 
-/* ========= Dashboard (Duolingo-style) ========= */
+/* ========= Mode selection dashboard ========= */
 async function renderHome(){
+  const wrap=document.createElement('div');
+  wrap.innerHTML=`
+    <div class="duo-layout">
+      <section class="skills-wrap">
+        <div class="skills-grid grid-3">
+          <a class="skill" data-target="phrases" href="#/phrases">
+            <div class="bubble"><div class="emoji">💬</div></div>
+            <div class="label">Phrases</div>
+            <div class="sub">Start</div>
+          </a>
+          <a class="skill" data-target="words" href="#/words">
+            <div class="bubble"><div class="emoji">🔤</div></div>
+            <div class="label">Words</div>
+            <div class="sub">Coming soon</div>
+          </a>
+          <a class="skill" data-target="songs" href="#/songs">
+            <div class="bubble"><div class="emoji">🎵</div></div>
+            <div class="label">Songs</div>
+            <div class="sub">Coming soon</div>
+          </a>
+          <a class="skill" data-target="stories" href="#/stories">
+            <div class="bubble"><div class="emoji">📖</div></div>
+            <div class="label">Stories</div>
+            <div class="sub">Coming soon</div>
+          </a>
+          <a class="skill" data-target="conversations" href="#/conversations">
+            <div class="bubble"><div class="emoji">🗣️</div></div>
+            <div class="label">Conversations</div>
+            <div class="sub">Coming soon</div>
+          </a>
+          <a class="skill" data-target="challenges" href="#/challenges">
+            <div class="bubble"><div class="emoji">🏆</div></div>
+            <div class="label">Challenges</div>
+            <div class="sub">Coming soon</div>
+          </a>
+        </div>
+      </section>
+      <aside class="sidebar">
+        <div class="panel-white stat-card" id="stat-phrases">
+          <div class="panel-title">Phrases</div>
+          <div class="ring" id="homePhraseRing"><span id="homePhraseRingTxt">0%</span></div>
+          <div class="list">
+            <div><span class="k">Today</span> · <span class="v" id="homePhraseToday">0/0</span></div>
+            <div><span class="k">Deck progress</span> · <span class="v" id="homePhraseProgLabel">0%</span></div>
+          </div>
+        </div>
+      </aside>
+    </div>
+  `;
+  wrap.querySelectorAll('.skill').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();go(el.dataset.target);}));
+
+  // phrase stats
+  const dk = deckKeyFromState();
+  const deckId = dk;
+  const prog  = JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}');
+  const rows  = await loadDeckRows(deckId);
+  const learned = Object.keys(prog.seen || {}).length;
+  const deckPct = rows.length ? Math.round((learned/rows.length)*100) : 0;
+
+  const daily = JSON.parse(localStorage.getItem(dailyKey) || '{}');
+  const allowed = daily.allowed || 0;
+  const used    = daily.used    || 0;
+  const pct     = allowed ? Math.round((used/allowed)*100) : 0;
+
+  wrap.querySelector('#homePhraseRing').style.setProperty('--pct', pct + '%');
+  wrap.querySelector('#homePhraseRingTxt').textContent = pct + '%';
+  wrap.querySelector('#homePhraseToday').textContent = `${used}/${allowed}`;
+  wrap.querySelector('#homePhraseProgLabel').textContent = `${deckPct}%`;
+
+  return wrap;
+}
+
+/* ========= Dashboard (Duolingo-style) ========= */
+async function renderPhraseDashboard(){
   const dk = deckKeyFromState();
   const deckId = dk;
   const active = DECKS.find(d=>d.id===deckId);
@@ -424,7 +561,8 @@ async function renderHome(){
           Deck: <strong>${active.name}</strong> · Day <span id="day-count">1</span>
         </div>
 
-        <div class="skills-grid">
+        <div class="skills-wrap">
+        <div class="skills-grid grid-2">
           <a class="skill" id="sk-new">
             <div class="bubble">
               <div class="emoji">🌱</div>
@@ -451,10 +589,15 @@ async function renderHome(){
             <div class="label">Quiz</div>
             <div class="sub">Multiple choice / type</div>
           </a>
-        </div>
 
-        <div class="duo-cta">
-          <button class="btn primary" id="runAllBtn">Run All</button>
+          <a class="skill" id="sk-all">
+            <div class="bubble">
+              <div class="emoji">▶️</div>
+            </div>
+            <div class="label">Play All</div>
+            <div class="sub">Run modules</div>
+          </a>
+        </div>
         </div>
       </section>
 
@@ -499,7 +642,7 @@ async function renderHome(){
   wrap.querySelector('#sk-new').addEventListener('click', () => go('newPhrase'));
   wrap.querySelector('#sk-review').addEventListener('click', () => go('review'));
   wrap.querySelector('#sk-quiz').addEventListener('click', () => go('test'));
-  wrap.querySelector('#runAllBtn').addEventListener('click', () => window.runAllDaily && window.runAllDaily());
+  wrap.querySelector('#sk-all').addEventListener('click', () => window.runAllDaily && window.runAllDaily());
 
   return wrap;
 }
@@ -507,16 +650,16 @@ async function renderHome(){
 
 
 window.addEventListener('fc:progress-updated', () => {
-  if (location.hash === '' || location.hash === '#/' || location.hash === '#/home') {
+  if (location.hash === '#/phrases') {
     const view = document.getElementById('view');
-    renderHome().then(el => view.replaceChildren(el));
+    renderPhraseDashboard().then(el => view.replaceChildren(el));
   }
 });
 
 window.addEventListener('visibilitychange', () => {
-  if (!document.hidden && (location.hash === '' || location.hash === '#/' || location.hash === '#/home')) {
+  if (!document.hidden && location.hash === '#/phrases') {
     const view = document.getElementById('view');
-    renderHome().then(el => view.replaceChildren(el));
+    renderPhraseDashboard().then(el => view.replaceChildren(el));
   }
 });
 
@@ -536,7 +679,7 @@ function colorStatCard(el,pct=50){
     if (step === 2 && m === 'test'){
       step = 0;
       window.removeEventListener('fc:module-complete', onComplete);
-      go('home');
+      go('phrases');
     }
   }
   window.runAllDaily = function(){
