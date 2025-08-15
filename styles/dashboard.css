@@ -17,6 +17,13 @@
   gap:16px; align-items:start;
 }
 
+@media (max-width: 600px){
+  .skills-grid.grid-3,
+  .skills-grid.grid-2{
+    grid-template-columns: 160px;
+  }
+}
+
 .skills-wrap{
   display:flex;
   align-items:center;
