@@ -25,7 +25,9 @@
         <a href="#/settings" data-route="settings">Settings</a>
       </nav>
     </div>
-    <div class="nav-right"></div>
+    <div class="nav-right">
+      <div id="dayIndicator" class="day-indicator" aria-label="Current day"></div>
+    </div>
   </header>
 
   <!-- Mobile topbar -->
@@ -83,6 +85,17 @@
         box.textContent = '[JS Error] ' + e.message + ' @ ' + (e.filename || '') + ':' + (e.lineno || '');
       });
     })();
+  </script>
+
+  <!-- show current day -->
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const el = document.getElementById('dayIndicator');
+      if (el) {
+        const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+        el.textContent = days[new Date().getDay()];
+      }
+    });
   </script>
 
   <!-- Firebase auth UI (unchanged) -->
