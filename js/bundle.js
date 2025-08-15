@@ -2002,7 +2002,7 @@ async function renderPhraseDashboard(){
   const used    = daily.used    || 0;
   const newToday = Math.max(0, allowed - used);
 
-  const quizCount = activeRows.length;
+  const quizCount = await fcGetTestQueueCount();
   const learned   = Object.keys(seen).length;
   const deckPct   = rows.length ? Math.round((learned/rows.length)*100) : 0;
 
