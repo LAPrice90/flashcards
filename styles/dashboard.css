@@ -84,6 +84,16 @@
 
 /* Learned phrases table */
 .phrase-table{ width:100%; border-collapse:collapse; margin-top:16px; font-size:14px; }
-.phrase-table th, .phrase-table td{ padding:8px 10px; border-bottom:1px solid var(--border); text-align:left; }
+.phrase-table th, .phrase-table td{ padding:8px 10px; border-bottom:1px solid var(--border); text-align:left; word-break:break-word; }
 .phrase-table th{ background: var(--panel-2); font-weight:700; }
 .phrase-table td.actions{ display:flex; gap:6px; }
+
+/* Stack table rows on small screens so content fits within width */
+@media (max-width: 600px){
+  .phrase-table thead{ display:none; }
+  .phrase-table tr{ display:block; border:1px solid var(--border); border-radius:8px; margin-bottom:12px; }
+  .phrase-table td{ display:block; border:none; padding:8px 10px; }
+  .phrase-table td + td{ border-top:1px solid var(--border); }
+  .phrase-table td::before{ content: attr(data-label); display:block; font-weight:700; color:var(--muted); margin-bottom:4px; }
+  .phrase-table td.actions{ display:flex; gap:6px; }
+}
