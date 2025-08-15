@@ -768,6 +768,10 @@ function colorStatCard(el,pct=50){
 
 /* ---------- Boot ---------- */
 window.addEventListener('DOMContentLoaded',()=>{
+  tickDay();
+  document.querySelectorAll('.day-display').forEach(el => {
+    el.textContent = getDayNumber();
+  });
   initDeckPicker();
   initMobileMenu();
   render();
