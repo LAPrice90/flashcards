@@ -450,32 +450,32 @@ async function renderHome(){
       <section class="skills-wrap">
         <div class="skills-grid grid-3">
           <a class="skill" data-target="phrases" href="#/phrases">
-            <div class="bubble"><div class="emoji">💬</div></div>
+            <div class="bubble"><img class="icon" src="media/icons/Phrases.png" alt="Phrases icon"></div>
             <div class="label">Phrases</div>
             <div class="sub">Start</div>
           </a>
           <a class="skill" data-target="words" href="#/words">
-            <div class="bubble"><div class="emoji">🔤</div></div>
+            <div class="bubble"><img class="icon" src="media/icons/Words.png" alt="Words icon"></div>
             <div class="label">Words</div>
             <div class="sub">Coming soon</div>
           </a>
           <a class="skill" data-target="songs" href="#/songs">
-            <div class="bubble"><div class="emoji">🎵</div></div>
+            <div class="bubble"><img class="icon" src="media/icons/Songs.png" alt="Songs icon"></div>
             <div class="label">Songs</div>
             <div class="sub">Coming soon</div>
           </a>
           <a class="skill" data-target="stories" href="#/stories">
-            <div class="bubble"><div class="emoji">📖</div></div>
+            <div class="bubble"><img class="icon" src="media/icons/Stories.png" alt="Stories icon"></div>
             <div class="label">Stories</div>
             <div class="sub">Coming soon</div>
           </a>
           <a class="skill" data-target="conversations" href="#/conversations">
-            <div class="bubble"><div class="emoji">🗣️</div></div>
+            <div class="bubble"><img class="icon" src="media/icons/Conversations.png" alt="Conversations icon"></div>
             <div class="label">Conversations</div>
             <div class="sub">Coming soon</div>
           </a>
           <a class="skill" data-target="challenges" href="#/challenges">
-            <div class="bubble"><div class="emoji">🏆</div></div>
+            <div class="bubble"><img class="icon" src="media/icons/Challenges.png" alt="Challenges icon"></div>
             <div class="label">Challenges</div>
             <div class="sub">Coming soon</div>
           </a>
