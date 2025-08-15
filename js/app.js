@@ -492,35 +492,30 @@ async function renderHome(){
         </div>
         <div class="panel-white stat-card">
           <div class="panel-title">Words</div>
-          <div class="ring"><span>0%</span></div>
           <div class="list">
             <div><span class="k">Coming soon</span></div>
           </div>
         </div>
         <div class="panel-white stat-card">
           <div class="panel-title">Songs</div>
-          <div class="ring"><span>0%</span></div>
           <div class="list">
             <div><span class="k">Coming soon</span></div>
           </div>
         </div>
         <div class="panel-white stat-card">
           <div class="panel-title">Stories</div>
-          <div class="ring"><span>0%</span></div>
           <div class="list">
             <div><span class="k">Coming soon</span></div>
           </div>
         </div>
         <div class="panel-white stat-card">
           <div class="panel-title">Conversations</div>
-          <div class="ring"><span>0%</span></div>
           <div class="list">
             <div><span class="k">Coming soon</span></div>
           </div>
         </div>
         <div class="panel-white stat-card">
           <div class="panel-title">Challenges</div>
-          <div class="ring"><span>0%</span></div>
           <div class="list">
             <div><span class="k">Coming soon</span></div>
           </div>
