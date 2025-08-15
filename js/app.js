@@ -447,8 +447,8 @@ async function renderHome(){
   const wrap=document.createElement('div');
   wrap.innerHTML=`
     <div class="duo-layout">
-      <section>
-        <div class="skills-grid">
+      <section class="skills-wrap">
+        <div class="skills-grid grid-3">
           <a class="skill" data-target="phrases" href="#/phrases">
             <div class="bubble"><div class="emoji">💬</div></div>
             <div class="label">Phrases</div>
@@ -561,7 +561,8 @@ async function renderPhraseDashboard(){
           Deck: <strong>${active.name}</strong> · Day <span id="day-count">1</span>
         </div>
 
-        <div class="skills-grid">
+        <div class="skills-wrap">
+        <div class="skills-grid grid-2">
           <a class="skill" id="sk-new">
             <div class="bubble">
               <div class="emoji">🌱</div>
@@ -588,10 +589,15 @@ async function renderPhraseDashboard(){
             <div class="label">Quiz</div>
             <div class="sub">Multiple choice / type</div>
           </a>
-        </div>
 
-        <div class="duo-cta">
-          <button class="btn primary" id="runAllBtn">Run All</button>
+          <a class="skill" id="sk-all">
+            <div class="bubble">
+              <div class="emoji">▶️</div>
+            </div>
+            <div class="label">Play All</div>
+            <div class="sub">Run modules</div>
+          </a>
+        </div>
         </div>
       </section>
 
@@ -636,7 +642,7 @@ async function renderPhraseDashboard(){
   wrap.querySelector('#sk-new').addEventListener('click', () => go('newPhrase'));
   wrap.querySelector('#sk-review').addEventListener('click', () => go('review'));
   wrap.querySelector('#sk-quiz').addEventListener('click', () => go('test'));
-  wrap.querySelector('#runAllBtn').addEventListener('click', () => window.runAllDaily && window.runAllDaily());
+  wrap.querySelector('#sk-all').addEventListener('click', () => window.runAllDaily && window.runAllDaily());
 
   return wrap;
 }
