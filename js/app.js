@@ -112,7 +112,7 @@ function escapeHTML(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;',
 const routes = {
   home: renderHome,
   phrases: renderPhraseDashboard,
-  words: renderComingSoon('Words'),
+  words: renderWordsDashboard,
   songs: renderComingSoon('Songs'),
   stories: renderComingSoon('Stories'),
   conversations: renderComingSoon('Conversations'),
@@ -458,14 +458,39 @@ async function renderHome(){
       <section class="skills-wrap">
         <div class="skills-grid grid-3">
           <a class="skill" data-target="phrases" href="#/phrases">
-            <div class="bubble"><svg width="26" height="26" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFFFFF" d="M8 8C8 5.8 9.8 4 12 4h24c2.2 0 4 1.8 4 4v20c0 2.2-1.8 4-4 4H24Q22 32 20.5 33.5L17 37Q16 38 16 40V32H12C9.8 32 8 30.2 8 28V8Z"/></svg></div>
+            <div class="bubble"><img class="icon" src="media/icons/Phrases.png" alt="Phrases icon"></div>
             <div class="label">Phrases</div>
             <div class="sub">Start</div>
           </a>
           <a class="skill" data-target="words" href="#/words">
             <div class="bubble"><img class="icon" src="media/icons/Words.png" alt="Words icon"></div>
             <div class="label">Words</div>
-            <div class="sub">Coming soon</div>
+            <div class="sub">Start</div>
+          </a>
+          <a class="skill" data-target="words?tab=days" href="#/words?tab=days">
+            <div class="bubble"><img class="icon" src="media/icons/Days.png" alt="Days icon"></div>
+            <div class="label">Days</div>
+            <div class="sub">Words</div>
+          </a>
+          <a class="skill" data-target="words?tab=months" href="#/words?tab=months">
+            <div class="bubble"><img class="icon" src="media/icons/Months.png" alt="Months icon"></div>
+            <div class="label">Months</div>
+            <div class="sub">Words</div>
+          </a>
+          <a class="skill" data-target="words?tab=numbers" href="#/words?tab=numbers">
+            <div class="bubble"><img class="icon" src="media/icons/Numbers.png" alt="Numbers icon"></div>
+            <div class="label">Numbers</div>
+            <div class="sub">Words</div>
+          </a>
+          <a class="skill" data-target="words?tab=colours" href="#/words?tab=colours">
+            <div class="bubble"><img class="icon" src="media/icons/Colours.png" alt="Colours icon"></div>
+            <div class="label">Colours</div>
+            <div class="sub">Words</div>
+          </a>
+          <a class="skill" data-target="words?tab=animals" href="#/words?tab=animals">
+            <div class="bubble"><img class="icon" src="media/icons/Animals.png" alt="Animals icon"></div>
+            <div class="label">Animals</div>
+            <div class="sub">Words</div>
           </a>
           <a class="skill" data-target="songs" href="#/songs">
             <div class="bubble"><img class="icon" src="media/icons/Songs.png" alt="Songs icon"></div>
@@ -551,6 +576,23 @@ async function renderHome(){
   wrap.querySelector('#homePhraseToday').textContent = `${used}/${allowed}`;
   wrap.querySelector('#homePhraseProgLabel').textContent = `${deckPct}%`;
 
+  return wrap;
+}
+
+async function renderWordsDashboard(qs){
+  const tab=(qs&&qs.get('tab'))||'days';
+  const tabs=['days','months','numbers','colours','animals'];
+  const wrap=document.createElement('div');
+  wrap.innerHTML=`
+    <h1 class="h1">Words</h1>
+    <nav class="tabs">
+      ${tabs.map(t=>`<a href="#/words?tab=${t}" class="${t===tab?'active':''}">${t.charAt(0).toUpperCase()+t.slice(1)}</a>`).join('')}
+    </nav>
+    <div class="panel-white" style="margin-top:20px">
+      <div class="panel-title">${tab.charAt(0).toUpperCase()+tab.slice(1)}</div>
+      <div class="list"><div><span class="k">Coming soon</span></div></div>
+    </div>
+  `;
   return wrap;
 }
 
