@@ -56,3 +56,9 @@
   box-shadow: inset 0 1px 0 rgba(0,0,0,.04);
 }
 .progress > i{ display:block; height:100%; width: var(--w, 0%); background: var(--welsh-red); }
+
+/* Learned phrases table */
+.phrase-table{ width:100%; border-collapse:collapse; margin-top:16px; font-size:14px; }
+.phrase-table th, .phrase-table td{ padding:8px 10px; border-bottom:1px solid var(--border); text-align:left; }
+.phrase-table th{ background: var(--panel-2); font-weight:700; }
+.phrase-table td.actions{ display:flex; gap:6px; }
