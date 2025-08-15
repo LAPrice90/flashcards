@@ -172,13 +172,16 @@ body { background: var(--bg); color: var(--text); }
   .navbar{ display:none; }
   .topbar{
     display: grid;
-    grid-template-columns: 40px 1fr 40px;
+    grid-template-columns: 1fr auto 1fr;
     align-items: center;
     position: sticky; top: 0; z-index: 30;
     background: var(--welsh-green);
     border-bottom: none;
     padding: 8px 12px;
   }
+  .topbar .icon-btn{ justify-self: start; }
+  .topbar-logo{ grid-column: 2; }
+  .topbar .day-display{ justify-self: end; }
   .brand-bar{ border-bottom: none; }
   .layout { grid-template-columns: 1fr; }
   .side {
