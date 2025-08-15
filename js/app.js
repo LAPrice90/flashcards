@@ -450,7 +450,7 @@ async function renderHome(){
       <section class="skills-wrap">
         <div class="skills-grid grid-3">
           <a class="skill" data-target="phrases" href="#/phrases">
-            <div class="bubble"><img class="icon" src="media/icons/Phrases.png" alt="Phrases icon"></div>
+            <div class="bubble"><svg width="26" height="26" viewBox="0 0 48 48" aria-hidden="true"><path fill="#FFFFFF" d="M8 8C8 5.8 9.8 4 12 4h24c2.2 0 4 1.8 4 4v20c0 2.2-1.8 4-4 4H24Q22 32 20.5 33.5L17 37Q16 38 16 40V32H12C9.8 32 8 30.2 8 28V8Z"/></svg></div>
             <div class="label">Phrases</div>
             <div class="sub">Start</div>
           </a>
