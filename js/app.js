@@ -595,7 +595,7 @@ async function renderPhraseDashboard(){
         <div class="skills-grid grid-2">
           <a class="skill" id="sk-new">
             <div class="bubble">
-              <div class="emoji">🌱</div>
+              <img class="icon" src="media/icons/New%20Phrases.png" alt="New Phrases icon">
               <div class="badge" id="b-new">0</div>
             </div>
             <div class="label">New Phrases</div>
@@ -604,7 +604,7 @@ async function renderPhraseDashboard(){
 
           <a class="skill" id="sk-review">
             <div class="bubble">
-              <div class="emoji">🔁</div>
+              <img class="icon" src="media/icons/Flashcards.png" alt="Flashcards icon">
               <div class="badge" id="b-review">0</div>
             </div>
             <div class="label">Flashcards</div>
@@ -613,7 +613,7 @@ async function renderPhraseDashboard(){
 
           <a class="skill" id="sk-quiz">
             <div class="bubble">
-              <div class="emoji">🧪</div>
+              <img class="icon" src="media/icons/Quiz.png" alt="Quiz icon">
               <div class="badge" id="b-quiz">0</div>
             </div>
             <div class="label">Quiz</div>
@@ -622,7 +622,7 @@ async function renderPhraseDashboard(){
 
           <a class="skill" id="sk-all">
             <div class="bubble">
-              <div class="emoji">▶️</div>
+              <img class="icon" src="media/icons/Play%20All.png" alt="Play All icon">
             </div>
             <div class="label">Play All</div>
             <div class="sub">Run modules</div>
