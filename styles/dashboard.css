@@ -97,3 +97,6 @@
   .phrase-table td::before{ content: attr(data-label); display:block; font-weight:700; color:var(--muted); margin-bottom:4px; }
   .phrase-table td.actions{ display:flex; gap:6px; }
 }
+
+/* Filter bar for learned phrases */
+.filter-bar{ margin:12px 0; }
