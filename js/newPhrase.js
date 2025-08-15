@@ -462,7 +462,7 @@ function fireProgressEvent(payload){
     .tm-label{ font-size:12px; color: var(--muted); text-align:center; }
     .tm-ansbox{ border:1px dashed var(--border); border-radius:10px; padding:8px 10px; margin-top:4px; background:rgba(255,255,255,0.02); }
     .tm-audio{ display:flex; justify-content:center; }
-    .chip{ display:inline-block; border:1px solid var(--border); background:var(--panel); border-radius:999px; padding:4px 10px; font-size:12px; color:#fff; margin:2px; }
+    .chip{ display:inline-block; border:1px solid var(--border); background:var(--panel); border-radius:999px; padding:4px 10px; font-size:12px; color:var(--text); margin:2px; }
   `;
   document.head.appendChild(style);
 })();

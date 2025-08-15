@@ -500,7 +500,7 @@ function fireProgressEvent(payload){
   const style = document.createElement('style');
   style.textContent = `
     .tm-label{font-size:12px;color:var(--muted);text-align:center;margin-top:6px;}
-    .tm-field{width:100%;margin-top:6px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--panel);color:#fff;font-size:16px;}
+    .tm-field{width:100%;margin-top:6px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--panel);color:var(--text);font-size:16px;}
     .tm-inputblock{margin-top:8px;}
     .tm-result{text-align:center;font-weight:800;margin-top:4px;}
     .tm-fail{color:#ff6b6b;}
