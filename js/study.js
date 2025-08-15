@@ -87,6 +87,11 @@ async function renderReview(query) {
 
   // UI state
   let idx = 0;
+  const startId = query.get('card');
+  if (startId) {
+    const i = cards.findIndex(c => c.id === startId);
+    if (i >= 0) idx = i;
+  }
   let showBack = false;   // front(Welsh) → back(English) in flash mode
   let slowNext = false;   // audio alternator
   let audio = null;

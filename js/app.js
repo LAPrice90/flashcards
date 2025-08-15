@@ -111,6 +111,7 @@ const routes = {
   home: renderHome,
   review: renderReview,
   decks: renderDecks,
+  learned: renderLearned,
   add: renderPlaceholder('Add Cards'),
   stats: renderPlaceholder('Stats'),
   settings: renderPlaceholder('Settings'),
@@ -362,6 +363,52 @@ function renderDecks(){
     list.appendChild(card);
   });
   wrap.appendChild(list);
+  return wrap;
+}
+
+async function renderLearned(){
+  const dk = deckKeyFromState();
+  const deckId = dk;
+  const rows = await loadDeckRows(deckId);
+  const prog = loadProgress(deckId);
+  const attempts = loadAttemptsMap();
+  const seen = prog.seen || {};
+  const activeRows = rows.filter(r=>seen[r.id] || (attempts[r.id] && attempts[r.id].length));
+
+  const data = activeRows.map(r=>{
+    const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
+    const status = acc >= 80 ? 'Mastered' : 'Needs review';
+    const tries = (attempts[r.id]||[]).length;
+    return { ...r, acc, status, tries };
+  });
+
+  const wrap=document.createElement('div');
+  wrap.innerHTML = `<h1 class="h1">Learned Phrases</h1>`;
+  const table=document.createElement('table');
+  table.className='phrase-table';
+  table.innerHTML=`<thead><tr>
+    <th>Phrase (Welsh)</th>
+    <th>Meaning (English)</th>
+    <th>Status</th>
+    <th>Accuracy</th>
+    <th>Last attempts</th>
+    <th>Tags</th>
+    <th>Actions</th>
+  </tr></thead><tbody></tbody>`;
+  const tbody=table.querySelector('tbody');
+  data.forEach(r=>{
+    const tr=document.createElement('tr');
+    tr.innerHTML=`
+      <td>${escapeHTML(r.front)}</td>
+      <td>${escapeHTML(r.back)}</td>
+      <td>${r.status}</td>
+      <td><div class="progress"><i style="--w:${r.acc}%"></i></div> ${r.acc}%</td>
+      <td>${r.tries}</td>
+      <td>${escapeHTML(r.tags)}</td>
+      <td class="actions"><a class="btn" href="#/review?card=${encodeURIComponent(r.id)}">Study</a> <a class="btn" href="#/test?card=${encodeURIComponent(r.id)}">Test</a></td>`;
+    tbody.appendChild(tr);
+  });
+  wrap.appendChild(table);
   return wrap;
 }
 function renderPlaceholder(title){
