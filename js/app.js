@@ -415,13 +415,13 @@ async function renderLearned(){
   data.forEach(r=>{
     const tr=document.createElement('tr');
     tr.innerHTML=`
-      <td>${escapeHTML(r.front)}</td>
-      <td>${escapeHTML(r.back)}</td>
-      <td>${r.status}</td>
-      <td><div class="progress"><i style="--w:${r.acc}%"></i></div> ${r.acc}%</td>
-      <td>${r.tries}</td>
-      <td>${escapeHTML(r.tags)}</td>
-      <td class="actions"><a class="btn" href="#/review?card=${encodeURIComponent(r.id)}">Study</a> <a class="btn" href="#/test?card=${encodeURIComponent(r.id)}">Test</a></td>`;
+      <td data-label="Phrase (Welsh)">${escapeHTML(r.front)}</td>
+      <td data-label="Meaning (English)">${escapeHTML(r.back)}</td>
+      <td data-label="Status">${r.status}</td>
+      <td data-label="Accuracy"><div class="progress"><i style="--w:${r.acc}%"></i></div> ${r.acc}%</td>
+      <td data-label="Last attempts">${r.tries}</td>
+      <td data-label="Tags">${escapeHTML(r.tags)}</td>
+      <td data-label="Actions" class="actions"><a class="btn" href="#/review?card=${encodeURIComponent(r.id)}">Study</a> <a class="btn" href="#/test?card=${encodeURIComponent(r.id)}">Test</a></td>`;
     tbody.appendChild(tr);
   });
   wrap.appendChild(table);
