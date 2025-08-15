@@ -1,6 +1,6 @@
 /* Duolingo-like dashboard */
 .duo-layout{
-  display:grid; grid-template-columns: 1fr 340px; gap:24px; align-items:start;
+  display:grid; grid-template-columns: 1fr 510px; gap:24px; align-items:start;
 }
 @media (max-width: 920px){ .duo-layout{ grid-template-columns: 1fr; } }
 
