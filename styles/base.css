@@ -81,7 +81,10 @@ body { background: var(--bg); color: var(--text); }
   background: var(--welsh-white);
   border-bottom: 4px solid var(--welsh-red);
 }
+.nav-left{ display:flex; align-items:center; gap:16px; }
+.nav-right{ display:flex; align-items:center; gap:16px; }
 .brand.dragon{ font-weight: 800; letter-spacing:.2px; color: var(--welsh-red); }
+.brand.dragon img{ height:40px; }
 .nav-horizontal{ display:flex; gap:14px; }
 .nav-horizontal a{
   display:inline-flex; align-items:center; gap:8px;
@@ -97,6 +100,7 @@ body { background: var(--bg); color: var(--text); }
 
 /* Mobile: show hamburger + drawer */
 .topbar { display: none; }
+.topbar-logo{ height:32px; justify-self:center; }
 .icon-btn {
   border: 1px solid var(--border);
   background: var(--panel);
