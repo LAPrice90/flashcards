@@ -14,5 +14,10 @@
 .side .nav a:hover { background: var(--panel-2); border-color: var(--border); }
 .side .nav a.active { background: var(--panel); border-color: var(--border); }
 
-/* Hide theme bits for now (uniform light) */
-.side-footer { display: none !important; }
+/* Footer inside the mobile menu for theme toggle and auth controls */
+.side-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 20px;
+}

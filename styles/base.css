@@ -153,9 +153,6 @@ body { background: var(--bg); color: var(--text); }
   text-decoration:none;
 }
 .brand-link svg{ width:36px; height:36px; }
-@media (max-width:420px){
-  .brand-name{ display:none; }
-}
 
 /* Mobile: show hamburger + drawer */
 .topbar { display: none; }
