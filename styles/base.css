@@ -139,7 +139,8 @@ body { background: var(--bg); color: var(--text); }
   height:56px;
   display:flex;
   align-items:center;
-  padding:0 24px;
+  justify-content:center;
+  padding:0;
 }
 .brand-link{
   display:flex;
@@ -162,11 +163,34 @@ body { background: var(--bg); color: var(--text); }
   display:block;
   margin:0 auto;
 }
-.icon-btn {
+
+.hamburger {
+  background:none;
   border:none;
-  background: var(--panel);
-  color: var(--text);
-  border-radius:10px; padding:4px; cursor:pointer;
+  padding:0;
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  gap:5px;
+  width:24px;
+  height:24px;
+  cursor:pointer;
+}
+
+.hamburger span {
+  display:block;
+  width:18px;
+  height:2px;
+  background:#ffffff;
+  border-radius:1px;
+  transition:background .18s ease;
+}
+
+.hamburger:hover span,
+.hamburger:focus span,
+.hamburger:active span {
+  background:#CFEEDA;
 }
 @media (max-width: 768px) {
   .navbar{ display:none; }
@@ -179,7 +203,7 @@ body { background: var(--bg); color: var(--text); }
     border-bottom: none;
     padding: 8px 12px;
   }
-  .topbar .icon-btn{ justify-self: start; }
+  .topbar .hamburger{ justify-self: start; }
   .topbar-logo{ grid-column: 2; }
   .topbar .day-display{ justify-self: end; }
   .brand-bar{ border-bottom: none; }
