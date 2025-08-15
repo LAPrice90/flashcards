@@ -116,11 +116,11 @@ const routes = {
   conversations: renderComingSoon('Conversations'),
   challenges: renderComingSoon('Challenges'),
   review: renderReview,
-  decks: renderDecks,
+  decks: renderComingSoon('Custom Phrases'),
   learned: renderLearned,
   add: renderPlaceholder('Add Cards'),
   stats: renderPlaceholder('Stats'),
-  settings: renderPlaceholder('Settings'),
+  settings: renderSettings,
   test: renderTestShell,
   newPhrase: () => window.renderNewPhrase ? window.renderNewPhrase() : document.createElement('div')
 };
@@ -347,25 +347,31 @@ function renderTestShell(){
     <section class="card card--center"><div id="test-container"></div></section>`;
   return wrap;
 }
-function renderDecks(){
-  const wrap=document.createElement('div');
-  wrap.innerHTML=`<h1 class="h1">Decks</h1>`;
-  const list=document.createElement('div');
-  list.className='row';
-  DECKS.forEach(d=>{
-    const prog=loadProgress(d.id);
-    const count=Object.keys(prog.seen||{}).length;
-    const card=document.createElement('div');
-    card.className='card';
-    card.style.minWidth='260px';
-    card.innerHTML=`
+function renderSettings(){
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `<h1 class="h1">Settings</h1>`;
+
+  const sub = document.createElement('h2');
+  sub.className = 'h2';
+  sub.textContent = 'Deck Options';
+  wrap.appendChild(sub);
+
+  const list = document.createElement('div');
+  list.className = 'row';
+  DECKS.forEach(d => {
+    const prog = loadProgress(d.id);
+    const count = Object.keys(prog.seen || {}).length;
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.minWidth = '260px';
+    card.innerHTML = `
       <div style="font-weight:700">${d.name}</div>
       <div class="muted">${count} active</div>
       <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
         <button class="btn">Set Active</button>
         <a class="btn" href="#/review?mode=quiz&deck=${d.id}">Review</a>
       </div>`;
-    card.querySelector('button').addEventListener('click',()=>setActiveDeck(d.id));
+    card.querySelector('button').addEventListener('click', () => setActiveDeck(d.id));
     list.appendChild(card);
   });
   wrap.appendChild(list);
