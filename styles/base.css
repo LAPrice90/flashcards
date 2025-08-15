@@ -156,7 +156,12 @@ body { background: var(--bg); color: var(--text); }
 
 /* Mobile: show hamburger + drawer */
 .topbar { display: none; }
-.topbar-logo{ height:48px; justify-self:center; }
+.topbar-logo{
+  height:48px;
+  justify-self:center;
+  display:block;
+  margin:0 auto;
+}
 .icon-btn {
   border:none;
   background: var(--panel);
@@ -174,6 +179,7 @@ body { background: var(--bg); color: var(--text); }
     border-bottom: none;
     padding: 8px 12px;
   }
+  .brand-bar{ border-bottom: none; }
   .layout { grid-template-columns: 1fr; }
   .side {
     display:block;
