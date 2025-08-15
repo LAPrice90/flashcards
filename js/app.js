@@ -437,7 +437,7 @@ function go(route){
 
 
 /* ========= Mode selection dashboard ========= */
-function renderHome(){
+async function renderHome(){
   const wrap=document.createElement('div');
   wrap.innerHTML=`
     <div class="skills-grid">
@@ -472,8 +472,85 @@ function renderHome(){
         <div class="sub">Coming soon</div>
       </a>
     </div>
+
+    <div class="stats-grid">
+      <div class="panel-white stat-card" id="stat-phrases">
+        <div class="panel-title">Phrases</div>
+        <div class="ring" id="homePhraseRing"><span id="homePhraseRingTxt">0%</span></div>
+        <div class="list">
+          <div><span class="k">Today</span> · <span class="v" id="homePhraseToday">0/0</span></div>
+          <div><span class="k">Deck progress</span> · <span class="v" id="homePhraseProgLabel">0%</span></div>
+        </div>
+        <div class="progress" id="homePhraseProg"><i></i></div>
+      </div>
+      <div class="panel-white stat-card">
+        <div class="panel-title">Words</div>
+        <div class="ring"><span>0%</span></div>
+        <div class="list">
+          <div><span class="k">Today</span> · <span class="v">0/0</span></div>
+          <div><span class="k">Deck progress</span> · <span class="v">0%</span></div>
+        </div>
+        <div class="progress"><i></i></div>
+      </div>
+      <div class="panel-white stat-card">
+        <div class="panel-title">Songs</div>
+        <div class="ring"><span>0%</span></div>
+        <div class="list">
+          <div><span class="k">Today</span> · <span class="v">0/0</span></div>
+          <div><span class="k">Deck progress</span> · <span class="v">0%</span></div>
+        </div>
+        <div class="progress"><i></i></div>
+      </div>
+      <div class="panel-white stat-card">
+        <div class="panel-title">Stories</div>
+        <div class="ring"><span>0%</span></div>
+        <div class="list">
+          <div><span class="k">Today</span> · <span class="v">0/0</span></div>
+          <div><span class="k">Deck progress</span> · <span class="v">0%</span></div>
+        </div>
+        <div class="progress"><i></i></div>
+      </div>
+      <div class="panel-white stat-card">
+        <div class="panel-title">Conversations</div>
+        <div class="ring"><span>0%</span></div>
+        <div class="list">
+          <div><span class="k">Today</span> · <span class="v">0/0</span></div>
+          <div><span class="k">Deck progress</span> · <span class="v">0%</span></div>
+        </div>
+        <div class="progress"><i></i></div>
+      </div>
+      <div class="panel-white stat-card">
+        <div class="panel-title">Challenges</div>
+        <div class="ring"><span>0%</span></div>
+        <div class="list">
+          <div><span class="k">Today</span> · <span class="v">0/0</span></div>
+          <div><span class="k">Deck progress</span> · <span class="v">0%</span></div>
+        </div>
+        <div class="progress"><i></i></div>
+      </div>
+    </div>
   `;
   wrap.querySelectorAll('.skill').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();go(el.dataset.target);}));
+
+  // phrase stats
+  const dk = deckKeyFromState();
+  const deckId = dk;
+  const prog  = JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}');
+  const rows  = await loadDeckRows(deckId);
+  const learned = Object.keys(prog.seen || {}).length;
+  const deckPct = rows.length ? Math.round((learned/rows.length)*100) : 0;
+
+  const daily = JSON.parse(localStorage.getItem(dailyKey) || '{}');
+  const allowed = daily.allowed || 0;
+  const used    = daily.used    || 0;
+  const pct     = allowed ? Math.round((used/allowed)*100) : 0;
+
+  wrap.querySelector('#homePhraseRing').style.setProperty('--pct', pct + '%');
+  wrap.querySelector('#homePhraseRingTxt').textContent = pct + '%';
+  wrap.querySelector('#homePhraseToday').textContent = `${used}/${allowed}`;
+  wrap.querySelector('#homePhraseProg').style.setProperty('--w', deckPct + '%');
+  wrap.querySelector('#homePhraseProgLabel').textContent = `${deckPct}%`;
+
   return wrap;
 }
 
