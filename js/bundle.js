@@ -1842,31 +1842,6 @@ async function renderHome(){
             <div class="label">Words</div>
             <div class="sub">Start</div>
           </a>
-          <a class="skill" data-target="words?tab=days" href="#/words?tab=days">
-            <div class="bubble"><img class="icon" src="media/icons/Days.png" alt="Days icon"></div>
-            <div class="label">Days</div>
-            <div class="sub">Words</div>
-          </a>
-          <a class="skill" data-target="words?tab=months" href="#/words?tab=months">
-            <div class="bubble"><img class="icon" src="media/icons/Months.png" alt="Months icon"></div>
-            <div class="label">Months</div>
-            <div class="sub">Words</div>
-          </a>
-          <a class="skill" data-target="words?tab=numbers" href="#/words?tab=numbers">
-            <div class="bubble"><img class="icon" src="media/icons/Numbers.png" alt="Numbers icon"></div>
-            <div class="label">Numbers</div>
-            <div class="sub">Words</div>
-          </a>
-          <a class="skill" data-target="words?tab=colours" href="#/words?tab=colours">
-            <div class="bubble"><img class="icon" src="media/icons/Colours.png" alt="Colours icon"></div>
-            <div class="label">Colours</div>
-            <div class="sub">Words</div>
-          </a>
-          <a class="skill" data-target="words?tab=animals" href="#/words?tab=animals">
-            <div class="bubble"><img class="icon" src="media/icons/Animals.png" alt="Animals icon"></div>
-            <div class="label">Animals</div>
-            <div class="sub">Words</div>
-          </a>
           <a class="skill" data-target="songs" href="#/songs">
             <div class="bubble"><img class="icon" src="media/icons/Songs.png" alt="Songs icon"></div>
             <div class="label">Songs</div>
