@@ -288,7 +288,7 @@ function fireProgressEvent(payload){
           <button class="btn audio-btn" id="np-play-slow" style="margin-left:6px;" disabled>🐢 0.6×</button>
         </div>
         <div class="flashcard-actions">
-          <button class="btn nav-btn" id="np-next" disabled>Next</button>
+          <button class="btn nav-btn" id="np-next">Next</button>
         </div>
         <div class="flashcard-progress muted">Card ${idx+1} of ${queue.length}</div>`;
       const playBtn=viewEl.querySelector('#np-play');
@@ -296,12 +296,11 @@ function fireProgressEvent(payload){
       const nextBtn=viewEl.querySelector('#np-next');
       playBtn.addEventListener('click',()=>playAudio(c.audio,1.0));
       slowBtn.addEventListener('click',()=>playAudio(c.audio,0.6));
-      nextBtn.addEventListener('click',()=>{step=STEPS.MEANING; render();});
+      nextBtn.addEventListener('click',()=>{ stopAudio(); step=STEPS.MEANING; render(); });
       (async()=>{
         await playSequence(c.audio);
         playBtn.disabled=false;
         slowBtn.disabled=false;
-        nextBtn.disabled=false;
       })();
       return;
     }
