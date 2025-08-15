@@ -14,7 +14,6 @@ const STORAGE = {
 const LS_PROGRESS_PREFIX = 'progress_';
 const LS_NEW_DAILY_PREFIX = 'np_daily_';
 const LS_ATTEMPTS_KEY = 'tm_attempts_v1';
-const LS_DAY_START = 'tm_day_start';
 const LS_DAY_COUNT = 'tm_day_count';
 const LS_DAY_LAST  = 'tm_last_increment';
 const SCORE_WINDOW = 10;
@@ -226,15 +225,12 @@ function accuracyHue(p){
 }
 function tickDay(){
   const today = todayKey();
-  let start = localStorage.getItem(LS_DAY_START);
-  if(!start){
-    localStorage.setItem(LS_DAY_START, today);
-  }
   const last = localStorage.getItem(LS_DAY_LAST);
   if(last !== today){
     const count = parseInt(localStorage.getItem(LS_DAY_COUNT) || '0', 10) + 1;
     localStorage.setItem(LS_DAY_COUNT, String(count));
     localStorage.setItem(LS_DAY_LAST, today);
+    window.fcSaveCloud && window.fcSaveCloud();
   }
 }
 function getDayNumber(){
