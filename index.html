@@ -25,7 +25,9 @@
         <a href="#/settings" data-route="settings">Settings</a>
       </nav>
     </div>
-    <div class="nav-right"></div>
+      <div class="nav-right">
+        <div id="dayDisplay" class="day-display"></div>
+      </div>
   </header>
 
   <!-- Mobile topbar -->
@@ -65,6 +67,14 @@
 
   <!-- app/router last -->
   <script src="js/app.js" defer></script>
+
+  <!-- show current day -->
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const el = document.getElementById("dayDisplay");
+      if (el) el.textContent = new Date().getDate();
+    });
+  </script>
 
   <!-- tiny error banner (unchanged) -->
   <script>
