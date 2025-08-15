@@ -35,7 +35,7 @@
 /* Right sidebar */
 .sidebar{ display:grid; gap:16px; }
 .panel-white{
-  background:#fff; border:1px solid var(--border); border-radius:16px;
+  background:#fff; border:1px solid var(--welsh-green); border-radius:16px;
   padding:16px; box-shadow: var(--shadow);
 }
 .panel-title{ font-weight:800; margin-bottom:8px; }

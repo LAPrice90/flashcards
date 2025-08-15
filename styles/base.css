@@ -80,8 +80,8 @@ body { background: var(--bg); color: var(--text); }
   position: sticky; top: 0; z-index: 40;
   display: flex; align-items: center; justify-content: space-between;
   gap: 16px; padding: 10px 16px;
-  background: var(--welsh-white);
-  border-bottom: 4px solid var(--welsh-red);
+  background: var(--welsh-green);
+  border-bottom: none;
 }
 .nav-left{ display:flex; align-items:center; gap:8px; }
 .nav-right{ display:flex; align-items:center; gap:16px; }
@@ -116,8 +116,8 @@ body { background: var(--bg); color: var(--text); }
     grid-template-columns: 40px 1fr 40px;
     align-items: center;
     position: sticky; top: 0; z-index: 30;
-    background: var(--panel);
-    border-bottom: 1px solid var(--border);
+    background: var(--welsh-green);
+    border-bottom: none;
     padding: 10px 12px;
   }
   .layout { grid-template-columns: 1fr; }
@@ -142,8 +142,8 @@ body, .main { background: #ffffff !important; }
 /* --- Lock to LIGHT mode & strengthen contrast --- */
 body { background: #ffffff !important; color: #0f1117 !important; }
 
-/* Make top nav definitely horizontal, dark text on white */
-.navbar { background:#fff; border-bottom:4px solid var(--welsh-red); }
+/* Make top nav definitely horizontal with green background */
+.navbar { background: var(--welsh-green); border-bottom: none; }
 .navbar .nav-horizontal { display:flex !important; flex-direction: row !important; gap:14px; }
 .navbar .nav-horizontal a { color:#0f1117; text-decoration:none; }
 .navbar .nav-horizontal a:hover,
