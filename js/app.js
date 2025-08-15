@@ -400,6 +400,17 @@ async function renderLearned(){
 
   const wrap=document.createElement('div');
   wrap.innerHTML = `<h1 class="h1">Learned Phrases</h1>`;
+
+  // Build dropdown of unique tags from learned phrases
+  const tagSet = Array.from(new Set(data.map(r=>r.tags).filter(Boolean))).sort();
+  if(tagSet.length){
+    const filter=document.createElement('div');
+    filter.className='filter-bar';
+    const opts = tagSet.map(t=>`<option value="${escapeHTML(t)}">${escapeHTML(t.charAt(0).toUpperCase()+t.slice(1))}</option>`).join('');
+    filter.innerHTML=`<label for="tagFilter">Category:</label> <select id="tagFilter" class="deck-select"><option value="">All</option>${opts}</select>`;
+    wrap.appendChild(filter);
+  }
+
   const table=document.createElement('table');
   table.className='phrase-table';
   table.innerHTML=`<thead><tr>
@@ -412,18 +423,30 @@ async function renderLearned(){
     <th>Actions</th>
   </tr></thead><tbody></tbody>`;
   const tbody=table.querySelector('tbody');
-  data.forEach(r=>{
-    const tr=document.createElement('tr');
-    tr.innerHTML=`
-      <td data-label="Phrase (Welsh)">${escapeHTML(r.front)}</td>
-      <td data-label="Meaning (English)">${escapeHTML(r.back)}</td>
-      <td data-label="Status">${r.status}</td>
-      <td data-label="Accuracy"><div class="progress"><i style="--w:${r.acc}%"></i></div> ${r.acc}%</td>
-      <td data-label="Last attempts">${r.tries}</td>
-      <td data-label="Tags">${escapeHTML(r.tags)}</td>
-      <td data-label="Actions" class="actions"><a class="btn" href="#/review?card=${encodeURIComponent(r.id)}">Study</a> <a class="btn" href="#/test?card=${encodeURIComponent(r.id)}">Test</a></td>`;
-    tbody.appendChild(tr);
-  });
+
+  function renderRows(){
+    const sel = wrap.querySelector('#tagFilter');
+    const tag = sel ? sel.value : '';
+    tbody.innerHTML='';
+    const rows = tag ? data.filter(r => (r.tags||'').split(/\s*,\s*/).includes(tag)) : data;
+    rows.forEach(r=>{
+      const tr=document.createElement('tr');
+      tr.innerHTML=`
+        <td data-label="Phrase (Welsh)">${escapeHTML(r.front)}</td>
+        <td data-label="Meaning (English)">${escapeHTML(r.back)}</td>
+        <td data-label="Status">${r.status}</td>
+        <td data-label="Accuracy"><div class="progress"><i style="--w:${r.acc}%"></i></div> ${r.acc}%</td>
+        <td data-label="Last attempts">${r.tries}</td>
+        <td data-label="Tags">${escapeHTML(r.tags)}</td>
+        <td data-label="Actions" class="actions"><a class="btn" href="#/review?card=${encodeURIComponent(r.id)}">Study</a> <a class="btn" href="#/test?card=${encodeURIComponent(r.id)}">Test</a></td>`;
+      tbody.appendChild(tr);
+    });
+  }
+
+  const selectEl = wrap.querySelector('#tagFilter');
+  if(selectEl) selectEl.addEventListener('change', renderRows);
+  renderRows();
+
   wrap.appendChild(table);
   return wrap;
 }
