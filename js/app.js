@@ -92,24 +92,16 @@ function initDeckPicker() {
   sel.addEventListener('change', e => setActiveDeck(e.target.value));
 }
 
-/* ---------- Theme ---------- */
-(function initTheme() {
-  const saved = localStorage.getItem(STORAGE.theme);
-  if (saved === 'light' || saved === 'dark') {
-    document.body.setAttribute('data-theme', saved);
-  }
-  const isLight = document.body.getAttribute('data-theme') === 'light';
+/* ---------- Theme (locked to light) ---------- */
+(function initTheme(){
+  document.body.setAttribute('data-theme', 'light');
+  // Remove any theme controls if they exist
   ['themeToggle','themeToggleTop'].forEach(id => {
     const el = document.getElementById(id);
-    if (!el) return;
-    el.checked = isLight;
-    el.addEventListener('change', e => {
-      const mode = e.target.checked ? 'light' : 'dark';
-      document.body.setAttribute('data-theme', mode);
-      localStorage.setItem(STORAGE.theme, mode);
-    });
+    if (el && el.closest('label')) el.closest('label').style.display = 'none';
   });
 })();
+
 
 /* ---------- Utils ---------- */
 function escapeHTML(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
@@ -387,7 +379,7 @@ function go(route){
 
 
 
-/* ========= Dashboard ========= */
+/* ========= Dashboard (Duolingo-style) ========= */
 async function renderHome(){
   const dk = deckKeyFromState();
   const deckId = dk;
@@ -395,87 +387,7 @@ async function renderHome(){
   const prog  = JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}');
   const attempts = JSON.parse(localStorage.getItem(attemptsKey) || '{}');
 
-  (function migrateDailyIfNeeded(){
-    const canonical = 'np_daily_' + dk;
-    const legacy    = 'np_daily_' + ((STATE && STATE.activeDeckId) || '');
-    if (canonical !== legacy) {
-      const legacyVal = localStorage.getItem(legacy);
-      const nothing = localStorage.getItem(canonical);
-      if (legacyVal && !nothing) localStorage.setItem(canonical, legacyVal);
-    }
-  })();
-
-  const wrap=document.createElement('div');
-  wrap.innerHTML = `
-    <h1 class="h1">Dashboard</h1>
-    <div class="muted" style="margin-bottom:8px;">
-      Active deck: <strong>${active.name}</strong> · Day <span id="day-count">1</span>
-    </div>
-    <section class="card cta-card">
-      <div class="cta-left">
-        <div class="cta-title" id="cta-title">Welcome back</div>
-        <div class="cta-sub muted" id="cta-sub">Let's keep the streak alive.</div>
-      </div>
-      <div class="cta-right">
-        <button class="btn primary" id="cta-btn">Start</button>
-      </div>
-    </section>
-    <section class="stats-grid dashboard">
-      <div class="card stat" id="stat-review">
-        <div class="title">Due for Review</div>
-        <div class="big" id="stat-review-num">—</div>
-        <button class="btn" id="btn-review">Review Now</button>
-      </div>
-      <div class="card stat" id="stat-new">
-        <div class="title">New Phrases Today</div>
-        <div class="big" id="stat-new-num">—</div>
-        <button class="btn" id="btn-new">Start New</button>
-      </div>
-      <div class="card stat" id="stat-test">
-        <div class="title">Test Queue</div>
-        <div class="big" id="stat-test-num">—</div>
-        <button class="btn" id="btn-test">Start Test</button>
-      </div>
-    </section>
-    <section class="card chips-card">
-      <div class="chips-title">What needs your attention</div>
-      <div class="chips" id="chips"></div>
-    </section>
-    <section class="card table-card">
-      <div class="table-head">
-        <div class="table-title">Progress</div>
-        <div class="filters">
-          <button class="pill" data-filter="today" aria-pressed="true">Today</button>
-          <button class="pill" data-filter="All">All</button>
-          <button class="pill" data-filter="Struggling">Struggling</button>
-          <button class="pill" data-filter="Needs review">Needs review</button>
-          <button class="pill" data-filter="Mastered">Mastered</button>
-          <input class="search" id="searchBox" placeholder="Search…"/>
-        </div>
-      </div>
-      <div class="table-wrap">
-        <table class="data" id="progressTable">
-          <thead>
-            <tr>
-              <th>Phrase (Welsh)</th><th>Meaning</th><th>Status</th>
-              <th>Accuracy (last ${SCORE_WINDOW})</th><th>Last attempts</th>
-              <th>Tags</th><th>Actions</th>
-            </tr>
-          </thead>
-          <tbody id="progressBody">
-            <tr><td colspan="7" class="muted">Loading…</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </section>`;
-
-  // was: ()=>location.hash='#/review'
-  wrap.querySelector('#btn-review').addEventListener('click', () => go('review'));
-  // was: ()=>location.hash='#/newPhrase'
-  wrap.querySelector('#btn-new').addEventListener('click', () => go('newPhrase'));
-  // test button handler added after queue count is known
-
-
+  // data
   const rows = await loadDeckRows(deckId);
   const seen = prog.seen || {};
   const activeRows = rows.filter(r=>seen[r.id] || (attempts[r.id] && attempts[r.id].length > 0));
@@ -483,148 +395,116 @@ async function renderHome(){
   const unseenCount = unseenRows.length;
 
   const enriched = activeRows.map(r=>{
-    const arr = (attempts[r.id] || []).filter(a => a.score !== false);
-    const acc = lastNAccuracy(r.id,SCORE_WINDOW,attempts);
+    const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
     const status = categoryFromPct(acc);
-    return {...r, acc, status, lastCount: arr.slice(-SCORE_WINDOW).length};
+    return { ...r, acc, status };
   });
-
   const strugglingCount = enriched.filter(x=>x.status==='Struggling').length;
   const needsCount      = enriched.filter(x=>x.status==='Needs review').length;
-  const masteredCount   = enriched.filter(x=>x.status==='Mastered').length;
-  const reviewDue = strugglingCount + needsCount;
+  const reviewDue       = strugglingCount + needsCount;
+
+  // new phrases allowance
   getDailyNewAllowance(deckId, strugglingCount, unseenCount);
-  const daily2 = JSON.parse(localStorage.getItem(dailyKey) || '{}');
-  const newToday = Math.max(0, (daily2.allowed || 0) - (daily2.used || 0));
-  console.log('[daily]', deckKeyFromState(), daily2);
+  const daily = JSON.parse(localStorage.getItem(dailyKey) || '{}');
+  const allowed = daily.allowed || 0;
+  const used    = daily.used    || 0;
+  const newToday = Math.max(0, allowed - used);
 
-  let newRemaining = newToday;
-  const todayList = [];
-  for(const r of rows){
-    if(seen[r.id] || (attempts[r.id] && attempts[r.id].length > 0)){
-      const arr = (attempts[r.id] || []).filter(a => a.score !== false);
-      const acc = lastNAccuracy(r.id,SCORE_WINDOW,attempts);
-      const status = categoryFromPct(acc);
-      todayList.push({...r, acc, status, lastCount: arr.slice(-SCORE_WINDOW).length});
-    } else if(newRemaining > 0){
-      todayList.push({...r, acc:0, status:'Unseen', lastCount:0});
-      newRemaining--;
-    }
-  }
+  const quizCount = activeRows.length;
+  const learned   = Object.keys(seen).length;
+  const deckPct   = rows.length ? Math.round((learned/rows.length)*100) : 0;
 
-  const testCount = await fcGetTestQueueCount();
+  // UI
+  const wrap = document.createElement('div');
+  wrap.innerHTML = `
+    <div class="duo-layout">
+      <section>
+        <h1 class="h1">Dashboard</h1>
+        <div class="muted" style="margin:-6px 0 18px">
+          Deck: <strong>${active.name}</strong> · Day <span id="day-count">1</span>
+        </div>
 
-  const testBtn = wrap.querySelector('#btn-test');
-  const testTitle = wrap.querySelector('#stat-test .title');
-  testTitle.textContent = 'Test Queue';
-  if (testCount > 0) {
-    testBtn.textContent = 'Start Test';
-    testBtn.addEventListener('click', () => go('test'));
-  } else {
-    testBtn.textContent = 'Practice (free retest)';
-    testBtn.addEventListener('click', () => go('test?practice=1'));
-  }
+        <div class="skills-grid">
+          <a class="skill" id="sk-new">
+            <div class="bubble">
+              <div class="emoji">🌱</div>
+              <div class="badge" id="b-new">0</div>
+            </div>
+            <div class="label">New Phrases</div>
+            <div class="sub">Start today</div>
+          </a>
 
-  wrap.querySelector('#stat-review-num').textContent = reviewDue;
-  wrap.querySelector('#stat-new-num').textContent = newToday;
-  wrap.querySelector('#stat-test-num').textContent = testCount;
+          <a class="skill" id="sk-review">
+            <div class="bubble">
+              <div class="emoji">🔁</div>
+              <div class="badge" id="b-review">0</div>
+            </div>
+            <div class="label">Flashcards</div>
+            <div class="sub">SRS review</div>
+          </a>
+
+          <a class="skill" id="sk-quiz">
+            <div class="bubble">
+              <div class="emoji">🧪</div>
+              <div class="badge" id="b-quiz">0</div>
+            </div>
+            <div class="label">Quiz</div>
+            <div class="sub">Multiple choice / type</div>
+          </a>
+        </div>
+
+        <div class="duo-cta">
+          <button class="btn primary" id="runAllBtn">Run All</button>
+        </div>
+      </section>
+
+      <aside class="sidebar">
+        <div class="panel-white">
+          <div class="panel-title">Daily target</div>
+          <div class="ring" id="dailyRing"><span id="ringTxt">0%</span></div>
+          <div class="list">
+            <div><span class="k">Today</span> · <span class="v" id="dailyLabel">0/0</span></div>
+            <div><span class="k">Streak</span> · <span class="v" id="streakNum">–</span></div>
+            <div><span class="k">Words learned</span> · <span class="v" id="wordsLearned">–</span></div>
+            <div><span class="k">Deck progress</span> · <span class="v" id="deckProg">–</span></div>
+          </div>
+        </div>
+
+        <div class="panel-white">
+          <div class="panel-title">Progress</div>
+          <div class="progress" id="xpBar"><i></i></div>
+        </div>
+      </aside>
+    </div>
+  `;
+
+  // counts
+  wrap.querySelector('#b-new').textContent    = newToday;
+  wrap.querySelector('#b-review').textContent = reviewDue;
+  wrap.querySelector('#b-quiz').textContent   = quizCount;
   wrap.querySelector('#day-count').textContent = getDayNumber();
 
-  colorStatCard(wrap.querySelector('#stat-review'), 100 - Math.min(100, reviewDue * 8));
-  colorStatCard(wrap.querySelector('#stat-new'), newToday ? 80 : 30);
-  colorStatCard(wrap.querySelector('#stat-test'), Math.max(30, 100 - strugglingCount * 6));
+  // daily ring
+  const pct = allowed ? Math.round((used/allowed)*100) : 0;
+  wrap.querySelector('#dailyRing').style.setProperty('--pct', pct + '%');
+  wrap.querySelector('#ringTxt').textContent = pct + '%';
+  wrap.querySelector('#dailyLabel').textContent = `${used}/${allowed}`;
+  wrap.querySelector('#wordsLearned').textContent = learned;
+  wrap.querySelector('#deckProg').textContent = `${deckPct}%`;
 
-  const ctaTitle = wrap.querySelector('#cta-title');
-  const ctaSub = wrap.querySelector('#cta-sub');
-  const ctaBtn = wrap.querySelector('#cta-btn');
+  // progress bar (use deck progress)
+  wrap.querySelector('#xpBar').style.setProperty('--w', deckPct + '%');
 
-  if (strugglingCount >= 15 && reviewDue > 0) {
-    ctaTitle.textContent = `🔁 ${reviewDue} due for review`;
-    ctaSub.textContent = `You’re juggling ${strugglingCount} struggling items. Let’s stabilise these first.`;
-    ctaBtn.textContent = 'Review now';
-    ctaBtn.onclick = () => go('review');
-  } else if (newToday > 0) {
-    ctaTitle.textContent = `🌱 ${newToday} New Phrase${newToday>1?'s':''} ready`;
-    ctaSub.textContent = `Struggling: ${strugglingCount}. We’ll pace new items accordingly.`;
-    ctaBtn.textContent = 'Start new';
-    ctaBtn.onclick = () => go('newPhrase');
-  } else if (reviewDue > 0) {
-    ctaTitle.textContent = `🔁 ${reviewDue} due for review`;
-    ctaSub.textContent = `Mastered: ${masteredCount}. Keep the momentum.`;
-    ctaBtn.textContent = 'Review now';
-    ctaBtn.onclick = () => go('test');
-  } else if (testCount > 0) {
-    ctaTitle.textContent = '🧪 Test Mode';
-    ctaSub.textContent = 'Quick checks keep recall sharp.';
-    ctaBtn.textContent = 'Start test';
-    ctaBtn.onclick = () => go('test');
-  } else {
-    ctaTitle.textContent = '📝 Practice';
-    ctaSub.textContent = 'Retest without affecting confidence.';
-    ctaBtn.textContent = 'Practice (free retest)';
-    ctaBtn.onclick = () => go('test?practice=1');
-  }
+  // actions
+  wrap.querySelector('#sk-new').addEventListener('click', () => go('newPhrase'));
+  wrap.querySelector('#sk-review').addEventListener('click', () => go('review'));
+  wrap.querySelector('#sk-quiz').addEventListener('click', () => go('test'));
+  wrap.querySelector('#runAllBtn').addEventListener('click', () => window.runAllDaily && window.runAllDaily());
 
-  const chipsBox = wrap.querySelector('#chips');
-  chipsBox.innerHTML = '';
-  todayList.slice(0,6).forEach(c=>{
-    const pill=document.createElement('button');
-    pill.className='chip '+(c.acc<50?'bad':c.acc<80?'warn':'good');
-    pill.textContent=`${c.front} • ${c.acc}%`;
-    pill.title=c.back;
-    pill.addEventListener('click', () => go('test'));
-    chipsBox.appendChild(pill);
-  });
-
-  const tbody = wrap.querySelector('#progressBody');
-  let baseList = todayList;
-  const renderRows = (filter='today',q='')=>{
-    if(filter==='today') baseList = todayList;
-    else if(filter==='All') baseList = enriched;
-    else if(filter==='Struggling') baseList=enriched.filter(x=>x.status==='Struggling');
-    else if(filter==='Needs review') baseList=enriched.filter(x=>x.status==='Needs review');
-    else if(filter==='Mastered') baseList=enriched.filter(x=>x.status==='Mastered');
-    else baseList = enriched;
-    const qlc=q.trim().toLowerCase();
-    const list=baseList.filter(r=>!qlc || r.front.toLowerCase().includes(qlc) || r.back.toLowerCase().includes(qlc));
-    tbody.innerHTML='';
-    if(!list.length){
-      tbody.innerHTML=`<tr><td colspan="7" class="muted">No results.</td></tr>`;
-      return;
-    }
-    list.forEach(r=>{
-      const tr=document.createElement('tr');
-      const hue=accuracyHue(r.acc);
-      tr.innerHTML=`
-        <td class="w">${escapeHTML(r.front)}</td>
-        <td class="e muted">${escapeHTML(r.back)}</td>
-        <td><span class="status ${r.status.replace(/\\s/g,'-').toLowerCase()}">${r.status}</span></td>
-        <td><div class="acc"><span>${r.acc}%</span><div class="bar"><span style="width:${r.acc}%; background:hsl(${hue} 70% 45%);"></span></div></div></td>
-        <td>${r.lastCount}</td>
-        <td>${escapeHTML(r.tags)}</td>
-        <td class="actions"><button class="btn xs" data-act="study">Study</button><button class="btn xs" data-act="test">Test</button></td>`;
-      tr.querySelector('[data-act="study"]').addEventListener('click',()=>location.hash='#/review');
-      tr.querySelector('[data-act="test"]').addEventListener('click',()=>location.hash='#/test');
-      tbody.appendChild(tr);
-    });
-  };
-
-  let currentFilter='today';
-  wrap.querySelectorAll('.filters .pill').forEach(btn=>{
-    btn.addEventListener('click',()=>{
-      wrap.querySelectorAll('.filters .pill').forEach(b=>b.setAttribute('aria-pressed','false'));
-      btn.setAttribute('aria-pressed','true');
-      currentFilter=btn.dataset.filter;
-      renderRows(currentFilter, wrap.querySelector('#searchBox').value || '');
-    });
-  });
-  wrap.querySelector('#searchBox').addEventListener('input',e=>{
-    renderRows(currentFilter, e.target.value || '');
-  });
-
-  renderRows();
   return wrap;
 }
+
+
 
 window.addEventListener('fc:progress-updated', () => {
   if (location.hash === '' || location.hash === '#/' || location.hash === '#/home') {
@@ -645,6 +525,27 @@ function colorStatCard(el,pct=50){
   const hue=accuracyHue(pct);
   el.style.boxShadow=`0 0 0 1px rgba(255,255,255,0.06), 0 0 0 3px hsl(${hue} 70% 25% / .25) inset`;
 }
+
+/* --- Run All (sequential modules) --- */
+(function(){
+  let step = 0; // 0=new, 1=review, 2=test
+  function onComplete(e){
+    const m = e.detail && e.detail.module;
+    if (step === 0 && m === 'new'){ step = 1; go('review'); return; }
+    if (step === 1 && m === 'review'){ step = 2; go('test'); return; }
+    if (step === 2 && m === 'test'){
+      step = 0;
+      window.removeEventListener('fc:module-complete', onComplete);
+      go('home');
+    }
+  }
+  window.runAllDaily = function(){
+    step = 0;
+    window.addEventListener('fc:module-complete', onComplete);
+    go('newPhrase');
+  };
+})();
+
 
 /* ---------- Boot ---------- */
 window.addEventListener('DOMContentLoaded',()=>{

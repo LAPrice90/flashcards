@@ -409,6 +409,7 @@ function fireProgressEvent(payload){
       viewEl.querySelector('#np-unlock').addEventListener('click',unlockNext);
     } else {
       viewEl.innerHTML=`<div class="flashcard-progress muted">No new phrases available today. Come back tomorrow.</div>`;
+      window.dispatchEvent(new CustomEvent('fc:module-complete',{ detail:{ module:'new' }}));
     }
   }
 

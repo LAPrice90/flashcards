@@ -401,6 +401,7 @@ function fireProgressEvent(payload){
         </div>
         <div class="flashcard-progress muted">Nice work!</div>
       </div>`;
+    window.dispatchEvent(new CustomEvent('fc:module-complete',{ detail:{ module:'test' }}));
   }
 
   /* ---------- Flow ---------- */

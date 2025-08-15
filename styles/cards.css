@@ -1,196 +1,73 @@
-/* ========================
-   Mobile-first Detailed Card
-   Image-on-top layout
-   Flashcard ⇄ Detailed toggle
-   ======================== */
-
-/* Center the mobile-width card on desktop */
-.card--center {
-  display: flex;
-  justify-content: center;
-}
+/* Flashcard layout */
+.card--center { display: flex; justify-content: center; }
 .flashcard {
-  width: 100%;
-  max-width: 420px;             /* phone-like width even on desktop */
-  background: linear-gradient(180deg, var(--panel), var(--panel-2));
+  width: 100%; max-width: 420px;
+  background: var(--panel);
   border: 1px solid var(--border);
-  border-radius: 16px;
-  box-shadow: var(--shadow);
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
+  border-radius: 16px; box-shadow: var(--shadow);
+  padding: 16px; display: flex; flex-direction: column; gap: 14px;
 }
 
-/* Topbar with view toggle */
-.fc-topbar {
-  display: flex;
-  justify-content: flex-end;
-}
-.toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  cursor: pointer;
-}
+/* Toggle */
+.fc-topbar { display: flex; justify-content: flex-end; }
+.toggle { display: inline-flex; align-items: center; gap: 8px; cursor: pointer; }
 .toggle input { display: none; }
-.toggle .tlabel {
-  display: inline-grid;
-  grid-auto-flow: column;
-  gap: 8px;
-  font-size: 12px;
-  color: var(--muted);
-}
+.toggle .tlabel { display: inline-grid; grid-auto-flow: column; gap: 8px; font-size: 12px; color: var(--muted); }
 .toggle input:checked + .tlabel span:first-child { opacity: .5; }
 .toggle input:not(:checked) + .tlabel span:last-child { opacity: .5; }
 
-/* Image block – handles portrait & landscape */
+/* Image */
 .flashcard-image {
-  width: 100%;
-  aspect-ratio: 1 / 1;
-  background: transparent;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  overflow: hidden;
-  display: grid;
-  place-items: center;
+  width: 100%; aspect-ratio: 1 / 1;
+  background: transparent; border: 1px solid var(--border); border-radius: 12px;
+  overflow: hidden; display: grid; place-items: center;
 }
-.flashcard-image img {
-  display: block;
-  max-width: 100%;
-  max-height: 100%;
-  width: auto;
-  height: auto;
-  object-fit: contain;
-  background: transparent;
-}
+.flashcard-image img { display: block; max-width: 100%; max-height: 100%; object-fit: contain; }
 
 /* Phrase row */
-.fc-phrase {
-  display: grid;
-  grid-template-columns: 1fr auto;
-  align-items: center;
-  gap: 10px;
-}
-.term {
-  text-align: center;
-  font-size: 28px;
-  font-weight: 800;
-  color: #fff;
-}
-.audio-btn {
-  min-width: 88px;
-}
-.phonetic {
-  grid-column: 1 / -1;
-  text-align: center;
-  font-size: 13px;
-  color: var(--muted);
-}
+.fc-phrase { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; }
+.term { text-align: center; font-size: 28px; font-weight: 800; color: var(--text); }
+.audio-btn { min-width: 88px; }
+.phonetic { grid-column: 1 / -1; text-align: center; font-size: 13px; color: var(--muted); }
 
 /* Translation */
-.translation {
-  text-align: center;
-  font-size: 18px;
-  font-weight: 700;
-  color: #fff;
-}
+.translation { text-align: center; font-size: 18px; font-weight: 700; color: var(--text); }
 .hidden { display: none !important; }
 
 /* Breakdown chips */
-.breakdown .breakdown-list {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  justify-content: center;
-}
-.chip {
-  border: 1px solid var(--border);
-  background: var(--panel);
-  border-radius: 999px;
-  padding: 6px 10px;
-  font-size: 12px;
-  color: #fff;
-}
+.breakdown .breakdown-list { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.chip { border: 1px solid var(--border); background: var(--panel); border-radius: 999px; padding: 6px 10px; font-size: 12px; color: var(--text); }
 
-/* Usage note */
-.usage {
-  font-size: 14px;
-  color: var(--muted);
-  text-align: center;
-}
-
-/* Example sentence */
-.example {
-  text-align: center;
-  font-size: 16px;
-}
-.example .ex-welsh {
-  font-weight: 600;
-  color: #fff;
-}
+/* Usage & examples */
+.usage { font-size: 14px; color: var(--muted); text-align: center; }
+.example { text-align: center; font-size: 16px; }
+.example .ex-welsh { font-weight: 600; color: var(--text); }
 
 /* Patterns */
-.patterns .patterns-list {
-  display: grid;
-  gap: 6px;
-  padding-left: 16px;
-}
-.patterns .patterns-list li {
-  color: #fff;
-  font-size: 14px;
-}
+.patterns .patterns-list { display: grid; gap: 6px; padding-left: 16px; }
+.patterns .patterns-list li { color: var(--text); font-size: 14px; }
 
 /* Actions */
-.flashcard-actions {
-  display: flex;
-  gap: 10px;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-.flashcard-actions .btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 120px;
-  background: var(--panel);
-  border-color: var(--border);
-  text-decoration: none;
-}
-.flashcard-actions .btn.nav-btn {
-  flex: 1 1 0;
-  min-width: 0;
-}
-.flashcard-actions .btn.end-btn {
-  flex: 1 0 100%;
-  min-width: 0;
-}
+.flashcard-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.flashcard-actions .btn { min-width: 120px; background: var(--panel); border-color: var(--border); text-decoration: none; }
+.flashcard-actions .btn.nav-btn { flex: 1 1 0; min-width: 0; }
+.flashcard-actions .btn.end-btn { flex: 1 0 100%; min-width: 0; }
 
 /* Progress */
-.flashcard-progress {
-  text-align: center;
-  font-size: 12px;
-  color: var(--muted);
-}
+.flashcard-progress { text-align: center; font-size: 12px; color: var(--muted); }
 
-/* View mode behaviour */
+/* View mode */
 .flashcard[data-view="flash"] .phonetic,
 .flashcard[data-view="flash"] .breakdown,
 .flashcard[data-view="flash"] .usage,
-.flashcard[data-view="flash"] .patterns {
-  display: none;
-}
-/* In flash view, translation is hidden until user flips (handled via .hidden class) */
+.flashcard[data-view="flash"] .patterns { display: none; }
 
-/* Mobile sizing tweaks */
+/* Mobile tweaks */
 @media (max-width: 430px) {
   .flashcard { max-width: 100%; padding: 14px; }
   .term { font-size: 24px; }
   .translation { font-size: 16px; }
 }
 
-/* Make the big term look clickable only in flash mode */
-.flashcard[data-view="flash"] .term { cursor: pointer; }
-
-/* If any old Flip button exists, hide it */
+/* Hide any legacy flip button */
 #flipBtn { display: none !important; }

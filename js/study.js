@@ -339,4 +339,27 @@ async function renderReview(query) {
   return wrap;
 }
 window.renderReview = renderReview;
+
+/* Run All hook: fire completion when "End Session" is clicked in Review */
+window.addEventListener('click', (e) => {
+  const btn = e.target.closest('.end-btn, [data-action="end"], button, a');
+  if (!btn) return;
+
+  const label = (btn.getAttribute('aria-label') || btn.textContent || '')
+    .trim().toLowerCase();
+
+  const isEnd =
+    btn.classList.contains('end-btn') ||
+    btn.matches('[data-action="end"]') ||
+    label === 'end session';
+
+  if (!isEnd) return;
+
+  // Tell the runner that Review finished
+  window.dispatchEvent(
+    new CustomEvent('fc:module-complete', { detail: { module: 'review' } })
+  );
+});
+
+
 })();

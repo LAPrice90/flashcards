@@ -3,56 +3,56 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Flashcards</title>
+  <title>Draig</title>
 
-  <!-- CSS (split) -->
+  <!-- CSS -->
   <link rel="stylesheet" href="styles/base.css">
   <link rel="stylesheet" href="styles/menu.css">
   <link rel="stylesheet" href="styles/dashboard.css">
   <link rel="stylesheet" href="styles/cards.css">
 </head>
-<body data-theme="dark">
-  <!-- Mobile/Tablet top bar -->
+<body data-theme="light">
+
+  <!-- Desktop navbar -->
+  <header class="navbar" role="banner">
+    <div class="nav-left">
+      <div class="brand dragon">Draig</div>
+      <nav class="nav nav-horizontal" aria-label="Primary">
+        <a href="#/home" data-route="home">Dashboard</a>
+        <a href="#/newPhrase" data-route="newPhrase">Phrases</a>
+        <a href="#/decks" data-route="decks">Custom Phrases</a>
+        <a href="#/settings" data-route="settings">Settings</a>
+      </nav>
+    </div>
+    <div class="nav-right">
+      <select id="deckSelect" class="deck-select" aria-label="Switch deck"></select>
+    </div>
+  </header>
+
+  <!-- Mobile topbar -->
   <header class="topbar">
     <button id="menuToggle" class="icon-btn" aria-label="Toggle menu">☰</button>
-    <div class="topbar-title">Flashcards</div>
+    <div class="topbar-title">Draig</div>
     <label class="toggle topbar-toggle" title="Light / Dark">
       <input type="checkbox" id="themeToggleTop" />
     </label>
   </header>
 
   <div class="layout">
-    <!-- Sidebar -->
+    <!-- Sidebar (mobile drawer only) -->
     <aside class="side">
-      <div class="brand">🧠 Flashcards</div>
-
-      <div class="deck-picker">
-        <label for="deckSelect" class="muted">Deck</label>
-        <select id="deckSelect"></select>
-      </div>
-
       <nav class="nav" aria-label="Primary">
-        <a href="#/home" data-route="home" class="active"><span>🏠</span> Home</a>
-        <a href="#/newPhrase" data-route="newPhrase" id="new-phrases"><span>🌱</span> New Phrases</a>
-        <a href="#/review" data-route="review"><span>🔁</span> Review</a>
-        <a href="#/test" data-route="test"><span>🧪</span> Test Mode</a>
-        <a href="#/decks" data-route="decks"><span>📚</span> Decks</a>
-        <a href="#/add" data-route="add"><span>➕</span> Add Cards</a>
-        <a href="#/stats" data-route="stats"><span>📈</span> Stats</a>
-        <a href="#/settings" data-route="settings"><span>⚙️</span> Settings</a>
+        <a href="#/home" data-route="home" class="active">Dashboard</a>
+        <a href="#/newPhrase" data-route="newPhrase">Phrases</a>
+        <a href="#/decks" data-route="decks">Custom Phrases</a>
+        <a href="#/settings" data-route="settings">Settings</a>
       </nav>
-
       <div class="side-footer">
         <label class="toggle">
           <input type="checkbox" id="themeToggle" />
           <span class="toggle-label">Light mode</span>
         </label>
-
-        <div style="display:flex; gap:8px; margin-top:10px;">
-          <input id="fc-import-file" type="file" accept="application/json" style="display:none;">
-        </div>
       </div>
-
     </aside>
 
     <!-- Main view -->
@@ -64,10 +64,10 @@
   <script src="js/study.js" defer></script>
   <script src="js/testMode.js" defer></script>
 
-  <!-- app/router last so the functions above already exist -->
+  <!-- app/router last -->
   <script src="js/app.js" defer></script>
 
-
+  <!-- tiny error banner (unchanged) -->
   <script>
     (function () {
       window.addEventListener('error', function (e) {
@@ -76,30 +76,22 @@
           box = document.createElement('div');
           box.id = 'errbox';
           box.style.position = 'fixed';
-          box.style.left = '0';
-          box.style.right = '0';
-          box.style.bottom = '0';
-          box.style.background = 'rgba(200,0,0,0.9)';
-          box.style.color = '#fff';
-          box.style.font = '12px/1.4 system-ui, sans-serif';
-          box.style.padding = '8px 12px';
-          box.style.zIndex = '99999';
-          document.body.appendChild(box);
+          box.style.left = '0'; box.style.right = '0'; box.style.bottom = '0';
+          box.style.background = 'rgba(200,0,0,0.9)'; box.style.color = '#fff';
+          box.style.font = '12px/1.4 system-ui, sans-serif'; box.style.padding = '8px 12px';
+          box.style.zIndex = '99999'; document.body.appendChild(box);
         }
         box.textContent = '[JS Error] ' + e.message + ' @ ' + (e.filename || '') + ':' + (e.lineno || '');
       });
     })();
   </script>
 
+  <!-- Firebase auth UI (unchanged) -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-app.js";
-    import {
-      getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect,
-      getRedirectResult, signOut, onAuthStateChanged
-    } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-auth.js";
     import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/12.1.0/firebase-firestore.js";
 
-    // --- Your config (from Firebase) ---
     const firebaseConfig = {
       apiKey: "AIzaSyAChauzqXrxR96_YMt0SJs2ygk9FQ6FpwU",
       authDomain: "flashcards-app-2f89e.firebaseapp.com",
@@ -110,12 +102,10 @@
       measurementId: "G-3JK7388FG1"
     };
 
-    // --- Init ---
     const app  = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db   = getFirestore(app);
 
-    // --- Helpers ---
     function clearLocalProgress() {
       const toRemove = [];
       for (let i = 0; i < localStorage.length; i++) {
@@ -124,7 +114,6 @@
       }
       toRemove.forEach(k => localStorage.removeItem(k));
     }
-
     async function loadOrCreateCloudProgress(uid) {
       const ref = doc(db, "progress", uid);
       const snap = await getDoc(ref);
@@ -132,102 +121,45 @@
         const data = snap.data();
         for (const [k, v] of Object.entries(data)) localStorage.setItem(k, v);
       } else {
-        await setDoc(ref, {}); // start empty
+        await setDoc(ref, {});
       }
     }
-
-    // Collect progress keys and save to Firestore (called by app.js/newPhrase.js/testMode.js)
     async function fcSaveCloud() {
       if (!auth.currentUser) return;
       const data = {};
       for (let i = 0; i < localStorage.length; i++) {
         const k = localStorage.key(i);
-        if (/^progress_/.test(k) || /^np_daily_/.test(k) || k === "tm_attempts_v1") {
-          data[k] = localStorage.getItem(k);
-        }
+        if (/^progress_/.test(k) || /^np_daily_/.test(k) || k === "tm_attempts_v1") data[k] = localStorage.getItem(k);
       }
       await setDoc(doc(db, "progress", auth.currentUser.uid), data);
     }
     window.fcSaveCloud = fcSaveCloud;
 
-    async function afterLogin() {
-      clearLocalProgress();
-      await loadOrCreateCloudProgress(auth.currentUser.uid);
-      location.reload();
-    }
-
-    // --- Auth actions ---
+    async function afterLogin() { clearLocalProgress(); await loadOrCreateCloudProgress(auth.currentUser.uid); location.reload(); }
     async function signInWithGoogle() {
       const provider = new GoogleAuthProvider();
-      try {
-        await signInWithPopup(auth, provider);
-        await afterLogin();
-      } catch (err) {
-        // Popup blocked/closed? Use redirect.
-        await signInWithRedirect(auth, provider);
-      }
+      try { await signInWithPopup(auth, provider); await afterLogin(); }
+      catch { await signInWithRedirect(auth, provider); }
     }
-    async function signOutUser() {
-      await signOut(auth);
-      clearLocalProgress();
-      location.reload();
-    }
+    async function signOutUser() { await signOut(auth); clearLocalProgress(); location.reload(); }
+    getRedirectResult(auth).then(async (res) => { if (res && res.user) await afterLogin(); }).catch(() => {});
 
-    // Handle redirect completion (mobile/Safari)
-    getRedirectResult(auth).then(async (res) => {
-      if (res && res.user) await afterLogin();
-    }).catch(() => {});
-
-    // --- Tiny auth UI (status + toggle button) ---
     function ensureAuthUI() {
       const host = document.querySelector(".side-footer") || document.body;
       let box = document.getElementById("authBox");
-      if (!box) {
-        box = document.createElement("div");
-        box.id = "authBox";
-        box.style.display = "flex";
-        box.style.flexDirection = "column";
-        box.style.gap = "6px";
-        box.style.marginTop = "10px";
-        host.appendChild(box);
-      }
-      if (!document.getElementById("authStatus")) {
-        const s = document.createElement("div");
-        s.id = "authStatus";
-        s.className = "muted";
-        box.appendChild(s);
-      }
-      if (!document.getElementById("authBtn")) {
-        const b = document.createElement("button");
-        b.id = "authBtn";
-        b.className = "btn";
-        box.appendChild(b);
-      }
+      if (!box) { box = document.createElement("div"); box.id = "authBox"; box.style.display = "flex"; box.style.flexDirection = "column"; box.style.gap = "6px"; box.style.marginTop = "10px"; host.appendChild(box); }
+      if (!document.getElementById("authStatus")) { const s = document.createElement("div"); s.id = "authStatus"; s.className = "muted"; box.appendChild(s); }
+      if (!document.getElementById("authBtn")) { const b = document.createElement("button"); b.id = "authBtn"; b.className = "btn"; box.appendChild(b); }
     }
-
     function renderAuthUI(user) {
       ensureAuthUI();
       const statusEl = document.getElementById("authStatus");
       const btn = document.getElementById("authBtn");
-      if (user) {
-        statusEl.textContent = `Signed in as ${user.email}`;
-        btn.textContent = "Sign out";
-        btn.onclick = signOutUser;
-      } else {
-        statusEl.textContent = "Not signed in";
-        btn.textContent = "Sign in with Google";
-        btn.onclick = signInWithGoogle;
-      }
+      if (user) { statusEl.textContent = `Signed in as ${user.email}`; btn.textContent = "Sign out"; btn.onclick = signOutUser; }
+      else { statusEl.textContent = "Not signed in"; btn.textContent = "Sign in with Google"; btn.onclick = signInWithGoogle; }
     }
-
     onAuthStateChanged(auth, (user) => renderAuthUI(user));
     document.addEventListener("DOMContentLoaded", () => renderAuthUI(auth.currentUser));
   </script>
-
-
-
-
-
-
 </body>
 </html>
