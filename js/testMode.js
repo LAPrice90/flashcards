@@ -397,7 +397,7 @@ function fireProgressEvent(payload){
         <div class="tm-result tm-correct" style="margin-top:8px;">${correct} / ${total} correct (${pct}%)</div>
         ${wrong.length ? `<div class="tm-mismatch"><div class="tm-label">Incorrect</div><ul class="tm-anslist">${list}</ul></div>` : ''}
         <div class="flashcard-actions" style="flex-direction:column; gap:6px;">
-          <a class="btn nav-btn" href="#/home">Home</a>
+          <a class="btn nav-btn" href="#/home">Finish</a>
         </div>
         <div class="flashcard-progress muted">Nice work!</div>
       </div>`;

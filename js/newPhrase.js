@@ -410,7 +410,8 @@ function fireProgressEvent(payload){
         <div class="flashcard-actions"><button class="btn primary" id="np-unlock">Unlock next phrase</button></div>`;
       viewEl.querySelector('#np-unlock').addEventListener('click',unlockNext);
     } else {
-      viewEl.innerHTML=`<div class="flashcard-progress muted">No new phrases available today. Come back tomorrow.</div>`;
+      viewEl.innerHTML=`<div class="flashcard-progress muted" style="margin-bottom:8px;">No new phrases available today. Come back tomorrow.</div>
+        <div class="flashcard-actions"><a class="btn nav-btn" href="#/home">Finish</a></div>`;
       window.dispatchEvent(new CustomEvent('fc:module-complete',{ detail:{ module:'new' }}));
     }
   }
