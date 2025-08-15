@@ -364,7 +364,6 @@ function fireProgressEvent(payload){
           markSeenNow(c.id);
           bumpDailyUsed();
           tickDay();
-          window.fcSaveCloud && window.fcSaveCloud();
           fireProgressEvent({ type: 'introduced', id: c.id });
           const deckId = dk;
           const prog = loadProgress(deckId);
