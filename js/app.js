@@ -109,6 +109,12 @@ function escapeHTML(s){return String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;',
 /* ---------- Router ---------- */
 const routes = {
   home: renderHome,
+  phrases: renderPhraseDashboard,
+  words: renderComingSoon('Words'),
+  songs: renderComingSoon('Songs'),
+  stories: renderComingSoon('Stories'),
+  conversations: renderComingSoon('Conversations'),
+  challenges: renderComingSoon('Challenges'),
   review: renderReview,
   decks: renderDecks,
   learned: renderLearned,
@@ -122,7 +128,7 @@ const routes = {
 async function render() {
   const [route, query] = parseHash();                 // ✅ read current route
   document.querySelectorAll('.nav a').forEach(a =>
-    a.classList.toggle('active', a.dataset.route === route)
+    a.classList.toggle('active', a.dataset.route === route || (route === 'phrases' && a.dataset.route === 'home'))
   );
 
   const el = document.getElementById('view');
@@ -415,6 +421,10 @@ function renderPlaceholder(title){
   return ()=>{const div=document.createElement('div');div.innerHTML=`<h1 class="h1">${title}</h1>`;return div;};
 }
 
+function renderComingSoon(title){
+  return ()=>{const div=document.createElement('div');div.innerHTML=`<h1 class="h1">${title}</h1><p>Coming soon</p>`;return div;};
+}
+
 function go(route){
   const [cur] = parseHash();
   if (cur === route) {
@@ -426,8 +436,49 @@ function go(route){
 
 
 
+/* ========= Mode selection dashboard ========= */
+function renderHome(){
+  const wrap=document.createElement('div');
+  wrap.innerHTML=`
+    <div class="skills-grid">
+      <a class="skill" data-target="phrases" href="#/phrases">
+        <div class="bubble"><div class="emoji">💬</div></div>
+        <div class="label">Phrases</div>
+        <div class="sub">Start</div>
+      </a>
+      <a class="skill" data-target="words" href="#/words">
+        <div class="bubble"><div class="emoji">🔤</div></div>
+        <div class="label">Words</div>
+        <div class="sub">Coming soon</div>
+      </a>
+      <a class="skill" data-target="songs" href="#/songs">
+        <div class="bubble"><div class="emoji">🎵</div></div>
+        <div class="label">Songs</div>
+        <div class="sub">Coming soon</div>
+      </a>
+      <a class="skill" data-target="stories" href="#/stories">
+        <div class="bubble"><div class="emoji">📖</div></div>
+        <div class="label">Stories</div>
+        <div class="sub">Coming soon</div>
+      </a>
+      <a class="skill" data-target="conversations" href="#/conversations">
+        <div class="bubble"><div class="emoji">🗣️</div></div>
+        <div class="label">Conversations</div>
+        <div class="sub">Coming soon</div>
+      </a>
+      <a class="skill" data-target="challenges" href="#/challenges">
+        <div class="bubble"><div class="emoji">🏆</div></div>
+        <div class="label">Challenges</div>
+        <div class="sub">Coming soon</div>
+      </a>
+    </div>
+  `;
+  wrap.querySelectorAll('.skill').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();go(el.dataset.target);}));
+  return wrap;
+}
+
 /* ========= Dashboard (Duolingo-style) ========= */
-async function renderHome(){
+async function renderPhraseDashboard(){
   const dk = deckKeyFromState();
   const deckId = dk;
   const active = DECKS.find(d=>d.id===deckId);
@@ -554,16 +605,16 @@ async function renderHome(){
 
 
 window.addEventListener('fc:progress-updated', () => {
-  if (location.hash === '' || location.hash === '#/' || location.hash === '#/home') {
+  if (location.hash === '#/phrases') {
     const view = document.getElementById('view');
-    renderHome().then(el => view.replaceChildren(el));
+    renderPhraseDashboard().then(el => view.replaceChildren(el));
   }
 });
 
 window.addEventListener('visibilitychange', () => {
-  if (!document.hidden && (location.hash === '' || location.hash === '#/' || location.hash === '#/home')) {
+  if (!document.hidden && location.hash === '#/phrases') {
     const view = document.getElementById('view');
-    renderHome().then(el => view.replaceChildren(el));
+    renderPhraseDashboard().then(el => view.replaceChildren(el));
   }
 });
 
@@ -583,7 +634,7 @@ function colorStatCard(el,pct=50){
     if (step === 2 && m === 'test'){
       step = 0;
       window.removeEventListener('fc:module-complete', onComplete);
-      go('home');
+      go('phrases');
     }
   }
   window.runAllDaily = function(){
