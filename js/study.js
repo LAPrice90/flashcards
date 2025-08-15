@@ -43,6 +43,25 @@ function isActiveCard(id, seen, attempts){
 }
 
 const SCORE_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
+const SCORE_WINDOW = 10;
+
+function shuffle(arr) {
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+function lastNAccuracy(cardId, n = SCORE_WINDOW, map = loadAttempts()){
+  const raw = map[cardId] || [];
+  const scored = raw.filter(a => a.score !== false);
+  const arr = scored.slice(-n);
+  if (!arr.length) return 0;
+  const p = arr.filter(a => a.pass).length;
+  return Math.round((p / arr.length) * 100);
+}
 
 function logAttempt(cardId, pass){
   const obj = loadAttempts();
@@ -74,7 +93,12 @@ async function renderReview(query) {
   const deck = await loadDeckSorted(dk);
   const seen = loadProgressSeen();
   const attempts = loadAttempts();
-  const cards = deck.filter(c => isActiveCard(c.id, seen, attempts));
+  let cards = deck.filter(c => isActiveCard(c.id, seen, attempts));
+  cards.forEach(c => { c.conf = lastNAccuracy(c.id, SCORE_WINDOW, attempts); });
+  const groups = {};
+  cards.forEach(c => (groups[c.conf] = groups[c.conf] || []).push(c));
+  const confKeys = Object.keys(groups).map(Number).sort((a,b) => a - b);
+  cards = confKeys.flatMap(conf => shuffle(groups[conf]));
   console.log('[active-count]', deckKeyFromState(), cards.length);
   console.log('[progress-key-used]', progressKey);
 
