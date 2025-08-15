@@ -14,7 +14,9 @@ const STORAGE = {
 const LS_PROGRESS_PREFIX = 'progress_';
 const LS_NEW_DAILY_PREFIX = 'np_daily_';
 const LS_ATTEMPTS_KEY = 'tm_attempts_v1';
-const LS_START_KEY = 'tm_start_date';
+const LS_DAY_START = 'tm_day_start';
+const LS_DAY_COUNT = 'tm_day_count';
+const LS_DAY_LAST  = 'tm_last_increment';
 const SCORE_WINDOW = 10;
 const LS_TEST_SESSION = 'tm_session';
 const SCORE_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
@@ -222,15 +224,21 @@ function accuracyHue(p){
   const clamped=Math.max(0,Math.min(100,p));
   return Math.round((clamped/100)*120);
 }
-function getDayNumber(){
+function tickDay(){
   const today = todayKey();
-  let start = localStorage.getItem(LS_START_KEY);
+  let start = localStorage.getItem(LS_DAY_START);
   if(!start){
-    localStorage.setItem(LS_START_KEY, today);
-    return 1;
+    localStorage.setItem(LS_DAY_START, today);
   }
-  const diff = Math.floor((new Date(today) - new Date(start))/86400000);
-  return diff + 1;
+  const last = localStorage.getItem(LS_DAY_LAST);
+  if(last !== today){
+    const count = parseInt(localStorage.getItem(LS_DAY_COUNT) || '0', 10) + 1;
+    localStorage.setItem(LS_DAY_COUNT, String(count));
+    localStorage.setItem(LS_DAY_LAST, today);
+  }
+}
+function getDayNumber(){
+  return parseInt(localStorage.getItem(LS_DAY_COUNT) || '0', 10);
 }
 async function loadDeckRows(deckId){
   const dk = deckId || deckKeyFromState();
