@@ -115,8 +115,8 @@ body { background: var(--bg); color: var(--text); }
 }
 .nav-horizontal a.active:hover,
 .nav-horizontal a.active:focus-visible{ transform:translateY(-1px); }
-#authBox{ display:flex; align-items:center; }
-#authBtn{
+.auth-box{ display:flex; align-items:center; }
+.auth-btn{
   background:#C8102E; color:#fff;
   border:none; border-radius:9999px;
   height:40px; padding:0 16px;
@@ -124,9 +124,9 @@ body { background: var(--bg); color: var(--text); }
   box-shadow:0 2px 6px rgba(0,0,0,.12);
   transition:background .18s ease, transform .18s ease;
 }
-#authBtn:hover{ background:#B30E28; }
-#authBtn:active{ transform:scale(.98); }
-#authBtn:focus-visible{ outline:2px solid #CFEEDA; outline-offset:2px; }
+.auth-btn:hover{ background:#B30E28; }
+.auth-btn:active{ transform:scale(.98); }
+.auth-btn:focus-visible{ outline:2px solid #CFEEDA; outline-offset:2px; }
 .deck-select{
   background: var(--panel); color: var(--text);
   border:none; border-radius:10px; padding:4px 10px;
