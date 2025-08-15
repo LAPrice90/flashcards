@@ -142,11 +142,13 @@ function fireProgressEvent(payload){
 
   /* ---------- Audio ---------- */
   let audioEl=null;
-  function stopAudio(){ if(audioEl){ audioEl.pause(); audioEl=null; } }
+  function stopAudio(){
+    if(window.fcAudio) window.fcAudio.stop();
+    audioEl=null;
+  }
   function playAudio(src,rate=1){
-    if(!src) return; stopAudio();
-    audioEl=new Audio(src); audioEl.playbackRate=rate;
-    audioEl.play().catch(()=>{});
+    if(!src) return;
+    audioEl = window.fcAudio ? window.fcAudio.play(src,rate) : null;
   }
   async function playSequence(src){
     await playOne(src,1.0);
@@ -156,8 +158,8 @@ function fireProgressEvent(payload){
   function playOne(src,rate){
     return new Promise(res=>{
       if(!src) return res();
-      stopAudio();
-      audioEl=new Audio(src); audioEl.playbackRate=rate;
+      audioEl = window.fcAudio ? window.fcAudio.create(src,rate) : null;
+      if(!audioEl) return res();
       audioEl.addEventListener('ended',res,{once:true});
       audioEl.play().catch(()=>res());
     });

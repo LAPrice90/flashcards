@@ -94,7 +94,6 @@ async function renderReview(query) {
   }
   let showBack = false;   // front(Welsh) → back(English) in flash mode
   let slowNext = false;   // audio alternator
-  let audio = null;
 
   const wrap = document.createElement('div');
   wrap.innerHTML = `
@@ -161,15 +160,14 @@ async function renderReview(query) {
 
   // audio helpers
   function stopAudio() {
-    if (audio) { audio.pause(); audio = null; }
+    if (window.fcAudio) window.fcAudio.stop();
   }
   function playAudio(src) {
     if (!src) return;
     stopAudio();
-    audio = new Audio(src);
-    audio.playbackRate = slowNext ? 0.6 : 1.0; // alternate fast/slow
+    const rate = slowNext ? 0.6 : 1.0; // alternate fast/slow
+    if (window.fcAudio) window.fcAudio.play(src, rate);
     slowNext = !slowNext;
-    audio.play();
   }
 
   // parsing helpers
