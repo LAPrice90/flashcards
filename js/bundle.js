@@ -2032,10 +2032,17 @@ async function renderPhraseDashboard(){
   const today = todayKey();
   const usedToday = daily.date === today ? (daily.used || 0) : 0;
   const updated = getDailyNewAllowance(unseenCount, usedToday, strugglingCount);
-  const allowed = updated.allowed || 0;
+  const newTodayAllowed = updated.allowed || 0;
   const used = updated.used || 0;
-  saveNewDaily(deckId, { date: today, allowed, used });
-  const newToday = Math.max(0, allowed - used);
+  saveNewDaily(deckId, { date: today, allowed: newTodayAllowed, used });
+  const newToday = Math.max(0, newTodayAllowed - used);
+
+  let bannerText = '';
+  if (newTodayAllowed < SETTINGS.newPerDay && newTodayAllowed > 0) {
+    bannerText = 'New phrases reduced';
+  } else if (newTodayAllowed === 0 && strugglingCount >= STRUGGLE_CAP) {
+    bannerText = 'New phrases paused';
+  }
 
   const quizCount = reviewDue;
   const learned   = Object.keys(seen).length;
@@ -2052,6 +2059,7 @@ async function renderPhraseDashboard(){
         </div>
 
         <div class="skills-wrap">
+        ${bannerText ? '<div class="practice-banner">' + bannerText + '</div>' : ''}
         <div class="skills-grid grid-2">
           <a class="skill" id="sk-new">
             <div class="bubble">
@@ -2118,10 +2126,10 @@ async function renderPhraseDashboard(){
   wrap.querySelector('#day-count').textContent = getDayNumber();
 
   // daily ring
-  const pct = allowed ? Math.round((used/allowed)*100) : 0;
+  const pct = newTodayAllowed ? Math.round((used/newTodayAllowed)*100) : 0;
   wrap.querySelector('#dailyRing').style.setProperty('--pct', pct + '%');
   wrap.querySelector('#ringTxt').textContent = pct + '%';
-  wrap.querySelector('#dailyLabel').textContent = `${used}/${allowed}`;
+  wrap.querySelector('#dailyLabel').textContent = `${used}/${newTodayAllowed}`;
   wrap.querySelector('#wordsLearned').textContent = learned;
   wrap.querySelector('#deckProg').textContent = `${deckPct}%`;
 
