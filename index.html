@@ -19,7 +19,6 @@
   <header class="navbar" role="banner">
     <div class="nav-left">
       <a href="#/home" class="brand siarad"><img src="media/image/welshflag.png" alt="Siarad logo"></a>
-      <select id="deckSelect" class="deck-select" aria-label="Switch deck"></select>
       <nav class="nav nav-horizontal" aria-label="Primary">
         <a href="#/home" data-route="home">Dashboard</a>
         <a href="#/learned" data-route="learned">Learned Phrases</a>
@@ -59,10 +58,10 @@
     <aside class="side">
       <div class="side-controls">
         <img src="media/image/welshflag.png" alt="Siarad logo" class="side-logo">
-        <select id="deckSelectSide" class="deck-select" aria-label="Switch deck"></select>
-        <div class="side-chips">
-          <span class="ph-chip"><span class="day-display"></span></span>
-          <span class="ph-chip" id="dueDisplay">0 due</span>
+        <select id="deckSelect" class="deck-select" aria-label="Switch deck"></select>
+        <div class="status-pills">
+          <span class="status-pill gold" id="newDisplay">0 new</span>
+          <span class="status-pill green" id="dueDisplay">0 due</span>
         </div>
       </div>
       <nav class="nav" aria-label="Primary">

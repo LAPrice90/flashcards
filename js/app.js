@@ -75,6 +75,36 @@ function setExamplesEN(v) {
   localStorage.setItem(STORAGE.examplesEN, String(!!v));
 }
 
+async function updateStatusPills(){
+  const deckId = deckKeyFromState();
+  const progressKey = 'progress_' + deckId;
+  const dailyKey    = 'np_daily_' + deckId;
+  const prog  = JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}');
+  const attempts = JSON.parse(localStorage.getItem(LS_ATTEMPTS_KEY) || '{}');
+  const rows = await loadDeckRows(deckId);
+  const seen = prog.seen || {};
+  const activeRows = rows.filter(r=>seen[r.id] || (attempts[r.id] && attempts[r.id].length > 0));
+  const unseenRows = rows.filter(r=>!seen[r.id] && !(attempts[r.id] && attempts[r.id].length > 0));
+  const unseenCount = unseenRows.length;
+  const enriched = activeRows.map(r=>{
+    const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
+    const status = categoryFromPct(acc);
+    return {status};
+  });
+  const strugglingCount = enriched.filter(x=>x.status==='Struggling').length;
+  const needsCount      = enriched.filter(x=>x.status==='Needs review').length;
+  const reviewDue       = strugglingCount + needsCount;
+  getDailyNewAllowance(deckId, strugglingCount, unseenCount);
+  const daily   = JSON.parse(localStorage.getItem(dailyKey) || '{}');
+  const allowed = daily.allowed || 0;
+  const used    = daily.used    || 0;
+  const newToday = Math.max(0, allowed - used);
+  const newEl=document.getElementById('newDisplay');
+  if(newEl) newEl.textContent=`${newToday} new`;
+  const dueEl=document.getElementById('dueDisplay');
+  if(dueEl) dueEl.textContent=`${reviewDue} due`;
+}
+
 /* ---------- Deck picker ---------- */
 function initDeckPicker() {
   document.querySelectorAll('.deck-select').forEach(sel=>{
@@ -135,6 +165,7 @@ async function render() {
   const fn = routes[route] || routes.home;
   const out = fn(query);
   el.replaceChildren(out instanceof Promise ? await out : out);
+  await updateStatusPills();
 }
 
 
@@ -569,7 +600,7 @@ async function renderHome(){
   `;
   const dk=deckKeyFromState();
   const active=DECKS.find(d=>d.id===dk)||{};
-  wrap.prepend(buildPageHeader('media/icons/flag.png','Dashboard',[active.name,'Day '+getDayNumber()]));
+  wrap.prepend(buildPageHeader('media/icons/flag.png','Dashboard'));
   wrap.querySelectorAll('.skill').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();go(el.dataset.target);}));
 
   // phrase stats
@@ -718,7 +749,7 @@ async function renderPhraseDashboard(){
       </aside>
     </div>
   `;
-  wrap.prepend(buildPageHeader('media/icons/Phrases.png','Phrases',[active.name,'Day '+getDayNumber(),reviewDue+' due'],{playAll:true}));
+  wrap.prepend(buildPageHeader('media/icons/Phrases.png','Phrases',[],{playAll:true}));
 
   // counts
   wrap.querySelector('#b-new').textContent    = newToday;
@@ -744,15 +775,13 @@ async function renderPhraseDashboard(){
   const pbtn=wrap.querySelector('#playAllBtn');
   if(pbtn) pbtn.addEventListener('click',()=>window.runAllDaily&&window.runAllDaily());
 
-  const dueEl=document.getElementById('dueDisplay');
-  if(dueEl) dueEl.textContent=reviewDue+' due';
-
   return wrap;
 }
 
 
 
 window.addEventListener('fc:progress-updated', () => {
+  updateStatusPills();
   if (location.hash === '#/phrases') {
     const view = document.getElementById('view');
     renderPhraseDashboard().then(el => view.replaceChildren(el));
