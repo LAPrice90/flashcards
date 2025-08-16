@@ -84,8 +84,8 @@ body { background: var(--bg); color: var(--text); }
   align-items:center;
   justify-content:center;
 }
-.brand.dragon{ font-weight: 800; letter-spacing:.2px; color: var(--welsh-red); }
-.brand.dragon img{ height:48px; }
+.brand.siarad{ font-weight: 800; letter-spacing:.2px; color: var(--welsh-red); }
+.brand.siarad img{ height:48px; }
 .nav-horizontal{ display:flex; gap:24px; }
 .nav-horizontal a{
   display:inline-flex; align-items:center; justify-content:center; gap:8px;
