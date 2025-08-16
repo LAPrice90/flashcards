@@ -88,7 +88,7 @@ if (firebaseConfig) {
       el.textContent = user ? `Signed in as ${user.email}` : "Not signed in";
     });
     document.querySelectorAll(".auth-btn").forEach(btn => {
-      btn.textContent = user ? "Sign out" : "Sign in with Google";
+      btn.textContent = user ? "Log Out" : "Login with Google";
       btn.onclick = user ? signOutUser : signInWithGoogle;
     });
   }
