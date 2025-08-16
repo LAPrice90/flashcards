@@ -92,8 +92,7 @@ async function updateStatusPills(){
     return {status};
   });
   const strugglingCount = enriched.filter(x=>x.status==='Struggling').length;
-  const needsCount      = enriched.filter(x=>x.status==='Needs review').length;
-  const reviewDue       = strugglingCount + needsCount;
+  const reviewDue       = await fcGetTestQueueCount();
   getDailyNewAllowance(deckId, strugglingCount, unseenCount);
   const daily   = JSON.parse(localStorage.getItem(dailyKey) || '{}');
   const allowed = daily.allowed || 0;
@@ -671,8 +670,7 @@ async function renderPhraseDashboard(){
     return { ...r, acc, status };
   });
   const strugglingCount = enriched.filter(x=>x.status==='Struggling').length;
-  const needsCount      = enriched.filter(x=>x.status==='Needs review').length;
-  const reviewDue       = strugglingCount + needsCount;
+  const reviewDue       = await fcGetTestQueueCount();
 
   // new phrases allowance
   getDailyNewAllowance(deckId, strugglingCount, unseenCount);
@@ -681,7 +679,7 @@ async function renderPhraseDashboard(){
   const used    = daily.used    || 0;
   const newToday = Math.max(0, allowed - used);
 
-  const quizCount = await fcGetTestQueueCount();
+  const quizCount = reviewDue;
   const learned   = Object.keys(seen).length;
   const deckPct   = rows.length ? Math.round((learned/rows.length)*100) : 0;
 
