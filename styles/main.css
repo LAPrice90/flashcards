@@ -306,6 +306,16 @@ body { background: #ffffff !important; color: #0f1117 !important; }
 
 .skill:hover .bubble{ border-color: var(--welsh-red); transform: translateY(-1px); transition: transform .12s ease; }
 
+.tabs{ display:flex; gap:12px; }
+.tabs .tab{ text-align:center; text-decoration:none; color:inherit; }
+.tabs .bubble{
+  width:60px; aspect-ratio:1; border-radius:50%;
+  background:#fff; border:2px solid var(--border); display:grid; place-items:center;
+}
+.tabs .tab.active .bubble{ border-color: var(--welsh-red); }
+.tabs .icon{ width:70%; height:70%; object-fit:contain; }
+.tabs .label{ margin-top:6px; font-size:12px; font-weight:700; }
+
 .duo-cta{ margin-top: 16px; display:flex; gap:12px; }
 .duo-cta .btn.primary{ background: var(--welsh-red); color:#fff; border-color: var(--welsh-red); }
 .duo-cta .btn.primary:hover{ filter: saturate(1.08); }
