@@ -368,7 +368,11 @@ async function renderNewPhrase(){
     unseenCards.sort(sortByCourseOrder);
 
     // Daily allowance
-    const daily = getDailyNewAllowance(dk, 0, unseenCards.length);
+    const prev = loadNewDaily(dk);
+    const dayKey = todayKey();
+    const usedToday = prev.date === dayKey ? (prev.used || 0) : 0;
+    const daily = getDailyNewAllowance(unseenCards.length, usedToday, 0);
+    saveNewDaily(dk, { date: dayKey, ...daily });
     queue = unseenCards.slice(0, Math.max(0, (daily.allowed || 0) - (daily.used || 0)));
 
     idx = 0; step = STEPS.WELSH;
