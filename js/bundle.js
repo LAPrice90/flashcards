@@ -1432,6 +1432,35 @@ function setExamplesEN(v) {
   localStorage.setItem(STORAGE.examplesEN, String(!!v));
 }
 
+async function updateStatusPills(){
+  const deckId = deckKeyFromState();
+  const progressKey = 'progress_' + deckId;
+  const dailyKey    = 'np_daily_' + deckId;
+  const prog  = JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}');
+  const attempts = JSON.parse(localStorage.getItem(LS_ATTEMPTS_KEY) || '{}');
+  const rows = await loadDeckRows(deckId);
+  const seen = prog.seen || {};
+  const activeRows = rows.filter(r=>seen[r.id] || (attempts[r.id] && attempts[r.id].length > 0));
+  const unseenRows = rows.filter(r=>!seen[r.id] && !(attempts[r.id] && attempts[r.id].length > 0));
+  const unseenCount = unseenRows.length;
+  const enriched = activeRows.map(r=>{
+    const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
+    const status = categoryFromPct(acc);
+    return {status};
+  });
+  const strugglingCount = enriched.filter(x=>x.status==='Struggling').length;
+  const reviewDue       = await fcGetTestQueueCount();
+  getDailyNewAllowance(deckId, strugglingCount, unseenCount);
+  const daily   = JSON.parse(localStorage.getItem(dailyKey) || '{}');
+  const allowed = daily.allowed || 0;
+  const used    = daily.used    || 0;
+  const newToday = Math.max(0, allowed - used);
+  const newEl=document.getElementById('newDisplay');
+  if(newEl) newEl.textContent=`${newToday} new`;
+  const dueEl=document.getElementById('dueDisplay');
+  if(dueEl) dueEl.textContent=`${reviewDue} due`;
+}
+
 /* ---------- Deck picker ---------- */
 function initDeckPicker() {
   const sel = document.getElementById('deckSelect');
@@ -1492,6 +1521,7 @@ async function render() {
   const fn = routes[route] || routes.home;
   const out = fn(query);
   el.replaceChildren(out instanceof Promise ? await out : out);
+  await updateStatusPills();
 }
 
 
@@ -1977,8 +2007,7 @@ async function renderPhraseDashboard(){
     return { ...r, acc, status };
   });
   const strugglingCount = enriched.filter(x=>x.status==='Struggling').length;
-  const needsCount      = enriched.filter(x=>x.status==='Needs review').length;
-  const reviewDue       = strugglingCount + needsCount;
+  const reviewDue       = await fcGetTestQueueCount();
 
   // new phrases allowance
   getDailyNewAllowance(deckId, strugglingCount, unseenCount);
@@ -1987,7 +2016,7 @@ async function renderPhraseDashboard(){
   const used    = daily.used    || 0;
   const newToday = Math.max(0, allowed - used);
 
-  const quizCount = await fcGetTestQueueCount();
+  const quizCount = reviewDue;
   const learned   = Object.keys(seen).length;
   const deckPct   = rows.length ? Math.round((learned/rows.length)*100) : 0;
 
@@ -2090,6 +2119,7 @@ async function renderPhraseDashboard(){
 
 
 window.addEventListener('fc:progress-updated', () => {
+  updateStatusPills();
   if (location.hash === '#/phrases') {
     const view = document.getElementById('view');
     renderPhraseDashboard().then(el => view.replaceChildren(el));
