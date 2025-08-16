@@ -302,10 +302,10 @@ body { background: #ffffff !important; color: #0f1117 !important; }
 .skill .emoji{ font-size:52px; line-height:1; }
 .skill .icon{ width:100%; height:100%; object-fit:contain; }
 .skill .badge{
-  position:absolute; top:-8px; right:-8px;
-  min-width: 30px; height:30px; padding:0 10px;
+  position:absolute; top:-6px; right:-6px;
+  min-width: 20px; height:20px; padding:0 6px;
   border-radius: 999px; display:grid; place-items:center;
-  background: var(--welsh-green); color:#fff; font-weight:800; font-size:12px;
+  background: var(--welsh-green); color:#fff; font-weight:800; font-size:9px;
   box-shadow: 0 8px 22px rgba(0,0,0,.15);
 }
 .skill .label{ margin-top:10px; font-weight:800; }
@@ -476,7 +476,8 @@ body { background: #ffffff !important; color: #0f1117 !important; }
   font-size: 34px;
   font-weight: 700;
   letter-spacing: -1%;
-  color: #0F1D13;
+  color: #C8102E;
+  font-family: 'Poppins','Nunito',sans-serif;
   margin: 0;
 }
 .ph-chips {
@@ -523,8 +524,26 @@ body { background: #ffffff !important; color: #0f1117 !important; }
   width: 48px;
   height: 48px;
 }
-.side-controls .side-chips {
+.side-controls .status-pills {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+}
+
+.status-pill {
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 9999px;
+  font-weight: 700;
+  display: inline-block;
+}
+
+.status-pill.gold {
+  background: #FFD447;
+  color: #0F1D13;
+}
+
+.status-pill.green {
+  background: var(--welsh-green);
+  color: #fff;
 }
