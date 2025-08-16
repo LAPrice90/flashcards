@@ -1959,8 +1959,7 @@ async function renderHome(){
   return wrap;
 }
 
-async function renderWordsDashboard(qs){
-  const tab=(qs&&qs.get('tab'))||'days';
+async function renderWordsDashboard(){
   const tabs=[
     {key:'days',label:'Days',icon:'Days'},
     {key:'months',label:'Months',icon:'Months'},
@@ -1970,17 +1969,29 @@ async function renderWordsDashboard(qs){
   ];
   const wrap=document.createElement('div');
   wrap.innerHTML=`
-    <h1 class="h1">Words</h1>
-    <nav class="tabs">
-      ${tabs.map(t=>`
-        <a href="#/words?tab=${t.key}" class="tab ${t.key===tab?'active':''}">
-          <div class="bubble"><img class="icon" src="media/icons/${t.icon}.png" alt="${t.label} icon"></div>
-          <div class="label">${t.label}</div>
-        </a>`).join('')}
-    </nav>
-    <div class="panel-white" style="margin-top:20px">
-      <div class="panel-title">${tab.charAt(0).toUpperCase()+tab.slice(1)}</div>
-      <div class="list"><div><span class="k">Coming soon</span></div></div>
+    <div class="duo-layout">
+      <section>
+        <h1 class="h1">Words</h1>
+        <div class="skills-wrap">
+          <div class="skills-grid grid-3">
+            ${tabs.map(t=>`
+              <a class="skill" href="#/words?tab=${t.key}">
+                <div class="bubble"><img class="icon" src="media/icons/${t.icon}.png" alt="${t.label} icon"></div>
+                <div class="label">${t.label}</div>
+                <div class="sub">Coming soon</div>
+              </a>`).join('')}
+          </div>
+        </div>
+      </section>
+      <aside class="sidebar">
+        ${tabs.map(t=>`
+        <div class="panel-white stat-card">
+          <div class="panel-title">${t.label}</div>
+          <div class="list">
+            <div><span class="k">Coming soon</span></div>
+          </div>
+        </div>`).join('')}
+      </aside>
     </div>
   `;
   return wrap;
