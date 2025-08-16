@@ -19,6 +19,7 @@
   <header class="navbar" role="banner">
     <div class="nav-left">
       <a href="#/home" class="brand siarad"><img src="media/image/welshflag.png" alt="Siarad logo"></a>
+      <select id="deckSelectTop" class="deck-select" aria-label="Switch deck"></select>
       <nav class="nav nav-horizontal" aria-label="Primary">
         <a href="#/home" data-route="home">Dashboard</a>
         <a href="#/learned" data-route="learned">Learned Phrases</a>
@@ -26,9 +27,10 @@
         <a href="#/settings" data-route="settings">Settings</a>
       </nav>
     </div>
-      <div class="nav-right">
-        <div id="dayDisplay" class="day-display"></div>
-      </div>
+    <div class="nav-right">
+      <div id="dayDisplay" class="day-display"></div>
+      <div class="auth-box"></div>
+    </div>
   </header>
 
   <!-- Mobile topbar -->
