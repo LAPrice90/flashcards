@@ -19,6 +19,7 @@ const LS_DAY_LAST  = 'tm_last_increment';
 const SCORE_WINDOW = 10;
 const LS_TEST_SESSION = 'tm_session';
 const SCORE_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
+const STRUGGLE_CAP = 10;
 
 function deckKeyFromState() {
   // Prefer the JSON filename stem already used by the fetch; fall back to STATE.activeDeckId.
@@ -93,10 +94,13 @@ async function updateStatusPills(){
   });
   const strugglingCount = enriched.filter(x=>x.status==='Struggling').length;
   const reviewDue       = await fcGetTestQueueCount();
-  getDailyNewAllowance(deckId, strugglingCount, unseenCount);
-  const daily   = JSON.parse(localStorage.getItem(dailyKey) || '{}');
-  const allowed = daily.allowed || 0;
-  const used    = daily.used    || 0;
+  const daily = loadNewDaily(deckId);
+  const today = todayKey();
+  const usedToday = daily.date === today ? (daily.used || 0) : 0;
+  const updated = getDailyNewAllowance(unseenCount, usedToday, strugglingCount);
+  const allowed = updated.allowed || 0;
+  const used = updated.used || 0;
+  saveNewDaily(deckId, { date: today, allowed, used });
   const newToday = Math.max(0, allowed - used);
   const newEl=document.getElementById('newDisplay');
   if(newEl) newEl.textContent=`${newToday} new`;
@@ -350,27 +354,14 @@ async function fcGetTestQueueCount(){
 }
 window.fcGetTestQueueCount = fcGetTestQueueCount;
 
-function getDailyNewAllowance(deckId, strugglingCount, unseenCount){
-  const key = todayKey();
-  let st = loadNewDaily(deckId);
-  const cap = SETTINGS.newPerDay; // e.g., 5
-
-  // New day OR nothing stored → start fresh
-  if (st.date !== key) {
-    const allowed = Math.min(cap, unseenCount);
-    st = { date: key, allowed, used: 0 };
-    saveNewDaily(deckId, st);
-    return st;
-  }
-
-  // Always clamp to cap and unseen
-  const allowed = Math.min(st.allowed ?? 0, cap, unseenCount);
-  const used    = Math.min(st.used ?? 0, allowed);
-
-  // If everything is mastered, keep today's numbers but cap correctly
-  const out = { date: key, allowed, used };
-  if (out.allowed !== st.allowed || out.used !== st.used) saveNewDaily(deckId, out);
-  return out;
+function getDailyNewAllowance(unseenCount, newTodayUsed, strugglingCount){
+  const base = SETTINGS.newPerDay;
+  const factor = Math.max(0, Math.min(1, (STRUGGLE_CAP - strugglingCount) / STRUGGLE_CAP));
+  let allowed = Math.floor(base * factor);
+  allowed = Math.min(allowed, unseenCount);
+  allowed = Math.max(0, Math.min(allowed, base));
+  const used = Math.min(newTodayUsed || 0, allowed);
+  return { allowed, used };
 }
 /* ========= Views ========= */
 function renderTestShell(){
@@ -682,11 +673,12 @@ async function renderPhraseDashboard(){
   const reviewDue       = await fcGetTestQueueCount();
 
   // new phrases allowance
-  getDailyNewAllowance(deckId, strugglingCount, unseenCount);
-  const daily = JSON.parse(localStorage.getItem(dailyKey) || '{}');
-  const allowed = daily.allowed || 0;
-  const used    = daily.used    || 0;
-  const newToday = Math.max(0, allowed - used);
+  const daily = loadNewDaily(deckId);
+  const today = todayKey();
+  const usedToday = daily.date === today ? (daily.used || 0) : 0;
+  const updated = getDailyNewAllowance(unseenCount, usedToday, strugglingCount);
+  saveNewDaily(deckId, { date: today, ...updated });
+  const newToday = Math.max(0, (updated.allowed || 0) - (updated.used || 0));
 
   const quizCount = reviewDue;
   const learned   = Object.keys(seen).length;
