@@ -89,9 +89,13 @@ if (firebaseConfig) {
     });
     document.querySelectorAll(".auth-btn").forEach(btn => {
       btn.textContent = user ? "Log Out" : "Login with Google";
-      btn.onclick = user ? signOutUser : signInWithGoogle;
     });
   }
   onAuthStateChanged(auth, (user) => renderAuthUI(user));
-  document.addEventListener("DOMContentLoaded", () => renderAuthUI(auth.currentUser));
+  document.addEventListener("DOMContentLoaded", () => {
+    renderAuthUI(auth.currentUser);
+    document.querySelectorAll(".auth-btn").forEach(btn => {
+      btn.addEventListener("click", () => auth.currentUser ? signOutUser() : signInWithGoogle());
+    });
+  });
 }
