@@ -2,7 +2,7 @@
 .side { border-right: 1px solid var(--border); padding: 18px; }
 
 .brand { font-weight: 800; letter-spacing: .2px; font-size: 20px; margin-bottom: 12px; }
-.brand.dragon{ color: var(--welsh-red); }
+.brand.siarad{ color: var(--welsh-red); }
 
 /* IMPORTANT: scope .nav to the sidebar so it DOESN'T affect the top navbar */
 .side .nav { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
