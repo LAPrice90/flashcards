@@ -102,8 +102,19 @@ async function updateStatusPills(){
   const used = updated.used || 0;
   saveNewDaily(deckId, { date: today, allowed, used });
   const newToday = Math.max(0, allowed - used);
+
   const newEl=document.getElementById('newDisplay');
-  if(newEl) newEl.textContent=`${newToday} new`;
+  if(newEl){
+    let txt=`${newToday} new`;
+    if(allowed < SETTINGS.newPerDay){
+      if(allowed===0 && strugglingCount >= STRUGGLE_CAP){
+        txt += ` — Paused — too many struggling (${strugglingCount}/${STRUGGLE_CAP})`;
+      }else{
+        txt += ` — Reduced new (${allowed}/${SETTINGS.newPerDay})`;
+      }
+    }
+    newEl.textContent=txt;
+  }
   const dueEl=document.getElementById('dueDisplay');
   if(dueEl) dueEl.textContent=`${reviewDue} due`;
 }
