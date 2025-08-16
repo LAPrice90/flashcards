@@ -55,8 +55,7 @@ function setActiveDeck(id) {
   if (!DECKS.some(d => d.id === id)) return;
   STATE.activeDeckId = id;
   localStorage.setItem(STORAGE.deck, id);
-  const sel = document.getElementById('deckSelect');
-  if (sel) sel.value = id;
+  document.querySelectorAll('.deck-select').forEach(sel=>{ sel.value = id; });
   render();
 }
 
@@ -78,19 +77,19 @@ function setExamplesEN(v) {
 
 /* ---------- Deck picker ---------- */
 function initDeckPicker() {
-  const sel = document.getElementById('deckSelect');
-  if (!sel) return;
-  sel.innerHTML = '';
-  DECKS.forEach(d => {
-    const prog = loadProgress(d.id);
-    const count = Object.keys(prog.seen || {}).length;
-    const opt = document.createElement('option');
-    opt.value = d.id;
-    opt.textContent = `${d.name} (${count})`;
-    if (d.id === STATE.activeDeckId) opt.selected = true;
-    sel.appendChild(opt);
+  document.querySelectorAll('.deck-select').forEach(sel=>{
+    sel.innerHTML='';
+    DECKS.forEach(d=>{
+      const prog=loadProgress(d.id);
+      const count=Object.keys(prog.seen||{}).length;
+      const opt=document.createElement('option');
+      opt.value=d.id;
+      opt.textContent=`${d.name} (${count})`;
+      if(d.id===STATE.activeDeckId) opt.selected=true;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change',e=>setActiveDeck(e.target.value));
   });
-  sel.addEventListener('change', e => setActiveDeck(e.target.value));
 }
 
 /* ---------- Theme (locked to light) ---------- */
@@ -458,6 +457,24 @@ function renderComingSoon(title){
   return ()=>{const div=document.createElement('div');div.innerHTML=`<h1 class="h1">${title}</h1><p>Coming soon</p>`;return div;};
 }
 
+function buildPageHeader(icon,title,chips=[],opts={}){
+  const header=document.createElement('div');
+  header.className='page-header';
+  const chipHtml=chips.length?`<div class="ph-chips">${chips.map(c=>`<span class="ph-chip">${c}</span>`).join('')}</div>`:'';
+  const play=opts.playAll?`<button class="play-all" id="playAllBtn"><img src="media/icons/Play%20All.png" alt="Play all"></button>`:'';
+  header.innerHTML=`
+    <div class="ph-main">
+      <div class="ph-left">
+        <img src="${icon}" alt="" class="ph-icon">
+        <h1 class="ph-title">${title}</h1>
+      </div>
+      ${play}
+    </div>
+    ${chipHtml}
+  `;
+  return header;
+}
+
 function go(route){
   const [cur] = parseHash();
   if (cur === route) {
@@ -550,10 +567,12 @@ async function renderHome(){
       </aside>
     </div>
   `;
+  const dk=deckKeyFromState();
+  const active=DECKS.find(d=>d.id===dk)||{};
+  wrap.prepend(buildPageHeader('media/icons/flag.png','Dashboard',[active.name,'Day '+getDayNumber()]));
   wrap.querySelectorAll('.skill').forEach(el=>el.addEventListener('click',e=>{e.preventDefault();go(el.dataset.target);}));
 
   // phrase stats
-  const dk = deckKeyFromState();
   const deckId = dk;
   const prog  = JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}');
   const rows  = await loadDeckRows(deckId);
@@ -584,7 +603,6 @@ async function renderWordsDashboard(qs){
   ];
   const wrap=document.createElement('div');
   wrap.innerHTML=`
-    <h1 class="h1">Words</h1>
     <nav class="tabs">
       ${tabs.map(t=>`
         <a href="#/words?tab=${t.key}" class="tab ${t.key===tab?'active':''}">
@@ -592,11 +610,12 @@ async function renderWordsDashboard(qs){
           <div class="label">${t.label}</div>
         </a>`).join('')}
     </nav>
-    <div class="panel-white" style="margin-top:20px">
+    <div class="panel-white">
       <div class="panel-title">${tab.charAt(0).toUpperCase()+tab.slice(1)}</div>
       <div class="list"><div><span class="k">Coming soon</span></div></div>
     </div>
   `;
+  wrap.prepend(buildPageHeader('media/icons/Words.png','Words'));
   return wrap;
 }
 
@@ -640,11 +659,6 @@ async function renderPhraseDashboard(){
   wrap.innerHTML = `
     <div class="duo-layout">
       <section>
-        <h1 class="h1">Dashboard</h1>
-        <div class="muted" style="margin:-6px 0 18px">
-          Deck: <strong>${active.name}</strong> · Day <span id="day-count">1</span>
-        </div>
-
         <div class="skills-wrap">
         <div class="skills-grid grid-2">
           <a class="skill" id="sk-new">
@@ -704,12 +718,12 @@ async function renderPhraseDashboard(){
       </aside>
     </div>
   `;
+  wrap.prepend(buildPageHeader('media/icons/Phrases.png','Phrases',[active.name,'Day '+getDayNumber(),reviewDue+' due'],{playAll:true}));
 
   // counts
   wrap.querySelector('#b-new').textContent    = newToday;
   wrap.querySelector('#b-review').textContent = reviewDue;
   wrap.querySelector('#b-quiz').textContent   = quizCount;
-  wrap.querySelector('#day-count').textContent = getDayNumber();
 
   // daily ring
   const pct = allowed ? Math.round((used/allowed)*100) : 0;
@@ -727,6 +741,11 @@ async function renderPhraseDashboard(){
   wrap.querySelector('#sk-review').addEventListener('click', () => go('review'));
   wrap.querySelector('#sk-quiz').addEventListener('click', () => go('test'));
   wrap.querySelector('#sk-all').addEventListener('click', () => window.runAllDaily && window.runAllDaily());
+  const pbtn=wrap.querySelector('#playAllBtn');
+  if(pbtn) pbtn.addEventListener('click',()=>window.runAllDaily&&window.runAllDaily());
+
+  const dueEl=document.getElementById('dueDisplay');
+  if(dueEl) dueEl.textContent=reviewDue+' due';
 
   return wrap;
 }

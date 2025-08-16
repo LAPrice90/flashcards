@@ -259,21 +259,28 @@ body { background: #ffffff !important; color: #0f1117 !important; }
 
 .skills-grid{
   display:grid;
-  justify-content:center;
 }
 .skills-grid.grid-3{
-  grid-template-columns: repeat(3,160px);
-  gap:28px; align-items:start;
+  grid-template-columns: repeat(4,1fr);
+  gap:32px;
+  align-items:start;
 }
 .skills-grid.grid-2{
-  grid-template-columns: repeat(2,160px);
-  gap:16px; align-items:start;
+  grid-template-columns: repeat(3,1fr);
+  gap:24px;
+  align-items:start;
 }
-
+@media (max-width: 920px){
+  .skills-grid.grid-3{
+    grid-template-columns: repeat(3,1fr);
+    gap:24px;
+  }
+}
 @media (max-width: 600px){
   .skills-grid.grid-3,
   .skills-grid.grid-2{
-    grid-template-columns: 160px;
+    grid-template-columns: repeat(2,1fr);
+    gap:16px;
   }
 }
 
@@ -436,3 +443,88 @@ body { background: #ffffff !important; color: #0f1117 !important; }
 
 /* Hide any legacy flip button */
 #flipBtn { display: none !important; }
+
+/* Page header */
+.page-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: grid;
+  gap: 8px;
+  background: #fff;
+  padding: 32px;
+  height: 112px;
+}
+.page-header .ph-main {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.page-header .ph-left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+.page-header .ph-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+.page-header .ph-title {
+  font-size: 34px;
+  font-weight: 700;
+  letter-spacing: -1%;
+  color: #0F1D13;
+  margin: 0;
+}
+.ph-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+.ph-chip {
+  font-size: 12px;
+  padding: 4px 8px;
+  border-radius: 9999px;
+  background: #E9F5ED;
+  color: #1C8E4A;
+}
+.play-all {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: #C8102E;
+  border: none;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.play-all img {
+  width: 24px;
+  height: 24px;
+}
+
+@media (max-width: 768px) {
+  .page-header {
+    padding: 20px;
+    height: 96px;
+  }
+}
+
+.side-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+.side-controls .side-logo {
+  width: 48px;
+  height: 48px;
+}
+.side-controls .side-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}

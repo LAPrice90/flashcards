@@ -40,7 +40,6 @@
       <span></span>
     </button>
     <a href="#/home"><img src="media/image/welshflag.png" alt="Siarad logo" class="topbar-logo"></a>
-    <div class="day-display"></div>
   </header>
 
   <!-- Brand bar -->
@@ -58,6 +57,14 @@
   <div class="layout">
     <!-- Sidebar (mobile drawer only) -->
     <aside class="side">
+      <div class="side-controls">
+        <img src="media/image/welshflag.png" alt="Siarad logo" class="side-logo">
+        <select id="deckSelectSide" class="deck-select" aria-label="Switch deck"></select>
+        <div class="side-chips">
+          <span class="ph-chip"><span class="day-display"></span></span>
+          <span class="ph-chip" id="dueDisplay">0 due</span>
+        </div>
+      </div>
       <nav class="nav" aria-label="Primary">
         <a href="#/home" data-route="home" class="active">Dashboard</a>
         <a href="#/learned" data-route="learned">Learned Phrases</a>
