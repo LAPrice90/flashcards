@@ -1411,8 +1411,9 @@ function setActiveDeck(id) {
   if (!DECKS.some(d => d.id === id)) return;
   STATE.activeDeckId = id;
   localStorage.setItem(STORAGE.deck, id);
-  const sel = document.getElementById('deckSelect');
-  if (sel) sel.value = id;
+  document.querySelectorAll('.deck-select').forEach(sel => {
+    sel.value = id;
+  });
   render();
 }
 
@@ -1463,19 +1464,19 @@ async function updateStatusPills(){
 
 /* ---------- Deck picker ---------- */
 function initDeckPicker() {
-  const sel = document.getElementById('deckSelect');
-  if (!sel) return;
-  sel.innerHTML = '';
-  DECKS.forEach(d => {
-    const prog = loadProgress(d.id);
-    const count = Object.keys(prog.seen || {}).length;
-    const opt = document.createElement('option');
-    opt.value = d.id;
-    opt.textContent = `${d.name} (${count})`;
-    if (d.id === STATE.activeDeckId) opt.selected = true;
-    sel.appendChild(opt);
+  document.querySelectorAll('.deck-select').forEach(sel => {
+    sel.innerHTML = '';
+    DECKS.forEach(d => {
+      const prog = loadProgress(d.id);
+      const count = Object.keys(prog.seen || {}).length;
+      const opt = document.createElement('option');
+      opt.value = d.id;
+      opt.textContent = `${d.name} (${count})`;
+      if (d.id === STATE.activeDeckId) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', e => setActiveDeck(e.target.value));
   });
-  sel.addEventListener('change', e => setActiveDeck(e.target.value));
 }
 
 /* ---------- Theme (locked to light) ---------- */
