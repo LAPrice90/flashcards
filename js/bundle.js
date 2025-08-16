@@ -1931,12 +1931,22 @@ async function renderHome(){
 
 async function renderWordsDashboard(qs){
   const tab=(qs&&qs.get('tab'))||'days';
-  const tabs=['days','months','numbers','colours','animals'];
+  const tabs=[
+    {key:'days',label:'Days',icon:'Days'},
+    {key:'months',label:'Months',icon:'Months'},
+    {key:'numbers',label:'Numbers',icon:'Numbers'},
+    {key:'colours',label:'Colours',icon:'Colours'},
+    {key:'animals',label:'Animals',icon:'Animals'}
+  ];
   const wrap=document.createElement('div');
   wrap.innerHTML=`
     <h1 class="h1">Words</h1>
     <nav class="tabs">
-      ${tabs.map(t=>`<a href="#/words?tab=${t}" class="${t===tab?'active':''}">${t.charAt(0).toUpperCase()+t.slice(1)}</a>`).join('')}
+      ${tabs.map(t=>`
+        <a href="#/words?tab=${t.key}" class="tab ${t.key===tab?'active':''}">
+          <div class="bubble"><img class="icon" src="media/icons/${t.icon}.png" alt="${t.label} icon"></div>
+          <div class="label">${t.label}</div>
+        </a>`).join('')}
     </nav>
     <div class="panel-white" style="margin-top:20px">
       <div class="panel-title">${tab.charAt(0).toUpperCase()+tab.slice(1)}</div>
