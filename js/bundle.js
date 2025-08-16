@@ -1461,9 +1461,22 @@ async function updateStatusPills(){
   const usedToday = daily.date === today ? (daily.used || 0) : 0;
   const updated = getDailyNewAllowance(unseenCount, usedToday, strugglingCount);
   saveNewDaily(deckId, { date: today, ...updated });
-  const newToday = Math.max(0, (updated.allowed || 0) - (updated.used || 0));
+  const allowed = updated.allowed || 0;
+  const used = updated.used || 0;
+  const newToday = Math.max(0, allowed - used);
+
   const newEl=document.getElementById('newDisplay');
-  if(newEl) newEl.textContent=`${newToday} new`;
+  if(newEl){
+    let txt=`${newToday} new`;
+    if(allowed < SETTINGS.newPerDay){
+      if(allowed===0 && strugglingCount >= STRUGGLE_CAP){
+        txt += ` — Paused — too many struggling (${strugglingCount}/${STRUGGLE_CAP})`;
+      }else{
+        txt += ` — Reduced new (${allowed}/${SETTINGS.newPerDay})`;
+      }
+    }
+    newEl.textContent=txt;
+  }
   const dueEl=document.getElementById('dueDisplay');
   if(dueEl) dueEl.textContent=`${reviewDue} due`;
 }
