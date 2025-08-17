@@ -28,7 +28,22 @@ async function loadDeckSorted(deckId){
 }
 
 function loadProgressSeen(){
-  try { return (JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}').seen) || {}; }
+  try {
+    const obj = JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}');
+    const seen = obj.seen || {};
+    let changed = false;
+    Object.values(seen).forEach(entry => {
+      const before = entry.interval;
+      if (window.FC_SRS && FC_SRS.ensureInterval) {
+        FC_SRS.ensureInterval(entry);
+      }
+      if (entry.interval !== before) changed = true;
+    });
+    if (changed) {
+      localStorage.setItem(progressKey, JSON.stringify({ ...obj, seen }));
+    }
+    return seen;
+  }
   catch { return {}; }
 }
 

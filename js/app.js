@@ -335,13 +335,20 @@ function loadProgress(deckId){
   try { obj = JSON.parse(localStorage.getItem(progressKey) || '{}'); }
   catch { obj = {}; }
   const seen = obj.seen || {};
+  let changed = false;
   Object.keys(seen).forEach(id => {
     const entry = seen[id] || {};
-    const n = typeof entry.interval === 'number' ? entry.interval : 1;
-    entry.interval = FC_UTILS.clampInterval(n);
+    const before = entry.interval;
+    if (window.FC_SRS && FC_SRS.ensureInterval) {
+      FC_SRS.ensureInterval(entry);
+    }
+    if (entry.interval !== before) changed = true;
     seen[id] = entry;
   });
   obj.seen = seen;
+  if (changed) {
+    localStorage.setItem(progressKey, JSON.stringify(obj));
+  }
   return obj;
 }
 function saveProgress(deckId,obj){
