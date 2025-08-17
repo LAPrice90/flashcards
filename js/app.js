@@ -319,8 +319,18 @@ function todayKey() {
 function loadProgress(deckId){
   const dk = deckId || deckKeyFromState();
   const progressKey = LS_PROGRESS_PREFIX + dk;
-  try{ return JSON.parse(localStorage.getItem(progressKey) || '{}'); }
-  catch { return {}; }
+  let obj;
+  try { obj = JSON.parse(localStorage.getItem(progressKey) || '{}'); }
+  catch { obj = {}; }
+  const seen = obj.seen || {};
+  Object.keys(seen).forEach(id => {
+    const entry = seen[id] || {};
+    const n = typeof entry.interval === 'number' ? entry.interval : 1;
+    entry.interval = FC_UTILS.clampInterval(n);
+    seen[id] = entry;
+  });
+  obj.seen = seen;
+  return obj;
 }
 function saveProgress(deckId,obj){
   const dk = deckId || deckKeyFromState();
