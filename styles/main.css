@@ -556,3 +556,7 @@ body { background: #ffffff !important; color: #0f1117 !important; }
   background: var(--welsh-green);
   color: #fff;
 }
+.status-pill.gray {
+  background: #e0e0e0;
+  color: #333;
+}

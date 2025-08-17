@@ -184,16 +184,31 @@ function fireProgressEvent(payload){
   let idx=0;             // index in queue
   let step=STEPS.WELSH;  // current step
   let allMastered=true;  // recomputed after each change
+  let newRemainingToday=0;
 
   function routeName(){
     const raw=location.hash.startsWith('#/')?location.hash.slice(2):'home';
     return (raw.split('?')[0]||'home');
   }
 
+  function updateAllowancePill(){
+    const pill=document.getElementById('np-allowance');
+    const wrap=document.getElementById('np-day-wrap');
+    if(!pill || !wrap) return;
+    if(newRemainingToday>0){
+      pill.textContent=`Today's new: ${newRemainingToday}`;
+      pill.style.display='inline-block';
+    }else{
+      pill.style.display='none';
+      wrap.textContent='Come back tomorrow';
+    }
+  }
+
   async function renderNewPhrase(){
     const host=document.createElement('div');
     host.innerHTML=`<h1 class="h1">New Words</h1>
       <div class="muted" id="np-day-wrap">Day <span id="np-day">1</span></div>
+      <div class="status-pill gray" id="np-allowance" style="display:none; margin-top:4px;"></div>
       <section class="card card--center"><div id="np-root" class="flashcard"></div></section>`;
     viewEl=host.querySelector('#np-root');
 
@@ -256,20 +271,34 @@ function fireProgressEvent(payload){
     };
     unseenCards.sort(sortByCourseOrder);
 
-    // 3) Get today’s allowance (fresh each day)
-    const prev = loadNewDaily(deckId);
-    const dayKey = todayKey();
-    const usedToday = prev.date === dayKey ? (prev.used || 0) : 0;
-    const daily = getDailyNewAllowance(unseenCards.length, usedToday, 0);
-    saveNewDaily(deckId, { date: dayKey, ...daily });
-    console.log('[daily]', deckKeyFromState(), daily);
+      const activeRows = deckRows.filter(r => seenIds.has(r.id) || (attempts[r.id] || []).length);
+      const enriched = activeRows.map(r=>{
+        const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
+        const status = categoryFromPct(acc);
+        return {status};
+      });
+      const strugglingCount = enriched.filter(x=>x.status==='Struggling').length;
 
-    // 4) Fresh queue for today only (no carry-over)
-    queue = unseenCards.slice(0, Math.max(0, (daily.allowed || 0) - (daily.used || 0)));
+      const prev = loadNewDaily(deckId);
+      const dayKey = todayKey();
+      const usedToday = prev.date === dayKey ? (prev.used || 0) : 0;
+      const daily = getDailyNewAllowance(unseenCards.length, usedToday, strugglingCount);
+      saveNewDaily(deckId, { date: dayKey, ...daily });
+      newRemainingToday = Math.max(0, (daily.allowed || 0) - (daily.used || 0));
+      const pill=host.querySelector('#np-allowance');
+      const wrap=host.querySelector('#np-day-wrap');
+      if(newRemainingToday>0){
+        pill.textContent=`Today's new: ${newRemainingToday}`;
+        pill.style.display='inline-block';
+      }else{
+        pill.style.display='none';
+        wrap.textContent='Come back tomorrow';
+      }
 
-    idx = 0;
-    step = STEPS.WELSH;
+      queue = unseenCards.slice(0, newRemainingToday);
 
+      idx = 0;
+      step = STEPS.WELSH;
 
       if (queue.length) {
         render();
@@ -386,18 +415,18 @@ function fireProgressEvent(payload){
       const inp=viewEl.querySelector('#np-typed');
       viewEl.querySelector('#np-submit').addEventListener('click',()=>{
         const ok=equalsLoose(inp.value||'', c.front);
-        if(ok){
-          markSeenNow(c.id);
-          bumpDailyUsed();
-          tickDay();
-          fireProgressEvent({ type: 'introduced', id: c.id });
-          const deckId = dk;
-          const prog = loadProgress(deckId);
-          syncProgressToGitHub(deckId,prog); initDeckPicker && initDeckPicker();
-          queue.splice(idx,1);
-          const daily = JSON.parse(localStorage.getItem(dailyKey) || '{}');
-          console.log('[daily]', deckKeyFromState(), daily);
-          viewEl.innerHTML=`
+          if(ok){
+            markSeenNow(c.id);
+            bumpDailyUsed();
+            tickDay();
+            newRemainingToday = Math.max(0, newRemainingToday - 1);
+            updateAllowancePill();
+            fireProgressEvent({ type: 'introduced', id: c.id });
+            const deckId = dk;
+            const prog = loadProgress(deckId);
+            syncProgressToGitHub(deckId,prog); initDeckPicker && initDeckPicker();
+            queue.splice(idx,1);
+            viewEl.innerHTML=`
             <div class="tm-result tm-correct">✓ Correct</div>
             <div class="term" style="margin-top:-6px;">${escapeHTML(c.front)}</div>
             <div class="tm-audio" style="margin-top:6px;"><button class="btn audio-btn" id="np-play">🔊 Play</button></div>
@@ -1467,17 +1496,13 @@ async function updateStatusPills(){
   const newToday = Math.max(0, allowed - used);
 
   const newEl=document.getElementById('newDisplay');
-  if(newEl){
-    let txt=`${newToday} new`;
-    if(allowed < SETTINGS.newPerDay){
-      if(allowed===0 && strugglingCount >= STRUGGLE_CAP){
+    if(newEl){
+      let txt=`${newToday} new`;
+      if(allowed < SETTINGS.newPerDay && allowed===0 && strugglingCount >= STRUGGLE_CAP){
         txt += ` — Paused — too many struggling (${strugglingCount}/${STRUGGLE_CAP})`;
-      }else{
-        txt += ` — Reduced new (${allowed}/${SETTINGS.newPerDay})`;
       }
+      newEl.textContent=txt;
     }
-    newEl.textContent=txt;
-  }
   const dueEl=document.getElementById('dueDisplay');
   if(dueEl) dueEl.textContent=`${reviewDue} due`;
 }

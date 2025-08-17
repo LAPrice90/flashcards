@@ -107,12 +107,8 @@ async function updateStatusPills(){
   const newEl=document.getElementById('newDisplay');
   if(newEl){
     let txt=`${newToday} new`;
-    if(allowed < SETTINGS.newPerDay){
-      if(allowed===0 && strugglingCount >= STRUGGLE_CAP){
-        txt += ` — Paused — too many struggling (${strugglingCount}/${STRUGGLE_CAP})`;
-      }else{
-        txt += ` — Reduced new (${allowed}/${SETTINGS.newPerDay})`;
-      }
+    if(allowed < SETTINGS.newPerDay && allowed===0 && strugglingCount >= STRUGGLE_CAP){
+      txt += ` — Paused — too many struggling (${strugglingCount}/${STRUGGLE_CAP})`;
     }
     newEl.textContent=txt;
   }
