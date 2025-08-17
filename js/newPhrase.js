@@ -602,6 +602,11 @@ function render(){
         const card = { id: c.id, introducedAt: entry && entry.introducedAt };
         FC_SRS.applyIntroPath && FC_SRS.applyIntroPath(card, 1);
         FC_SRS.persistCard && FC_SRS.persistCard(card);
+        recordEvent && recordEvent('intro_step', {
+          cardId: c.id,
+          stepIndex: 1,
+          scheduledFor: card.dueDate
+        });
         if(entry){
           entry.interval = card.interval;
           entry.dueDate = card.dueDate;

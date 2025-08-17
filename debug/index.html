@@ -1,0 +1,25 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Metrics Debug</title>
+<style>
+body{font-family:monospace;padding:20px;}
+pre{white-space:pre-wrap;word-break:break-word;background:#f0f0f0;padding:10px;border-radius:4px;}
+</style>
+</head>
+<body>
+<h1>Metrics</h1>
+<button id="clear">Clear</button>
+<pre id="dump"></pre>
+<script src="../js/metrics.js"></script>
+<script>
+function render(){
+  const data=(window.getMetrics&&window.getMetrics())||[];
+  document.getElementById('dump').textContent=JSON.stringify(data,null,2);
+}
+render();
+document.getElementById('clear').addEventListener('click',()=>{ window.clearMetrics&&window.clearMetrics(); render(); });
+</script>
+</body>
+</html>

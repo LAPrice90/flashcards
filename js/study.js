@@ -100,6 +100,7 @@ async function renderReview(query) {
   cards = confKeys.flatMap(conf => shuffle(groups[conf]));
   console.log('[active-count]', deckKeyFromState(), cards.length);
   console.log('[progress-key-used]', progressKey);
+  recordEvent && recordEvent('session_started', { countDue: cards.length, countServed: cards.length });
 
   if (!cards.length) {
     const err = document.createElement('div');
