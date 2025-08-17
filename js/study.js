@@ -11,7 +11,6 @@ function deckKeyFromState() {
 
 const dk          = deckKeyFromState();
 const progressKey = 'progress_' + dk;          // read/write here
-const dailyKey    = 'np_daily_' + dk;          // read in Test/Study; read/write in New Phrases
 const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchanged)
 
 (function migrateProgressIfNeeded(){

@@ -12,7 +12,6 @@ const STORAGE = {
 };
 
 const LS_PROGRESS_PREFIX = 'progress_';
-const LS_NEW_DAILY_PREFIX = 'np_daily_';
 const LS_ATTEMPTS_KEY = 'tm_attempts_v1';
 const LS_DAY_COUNT = 'tm_day_count';
 const LS_DAY_LAST  = 'tm_last_increment';
@@ -21,6 +20,7 @@ const LS_TEST_SESSION = 'tm_session';
 const SCORE_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
 const STRUGGLE_CAP = 10;
 const SESSION_MAX = 15;
+const { getBucketFromAccuracy, BUCKETS, BUCKET_LABELS, getDailyNewAllowance, peekAllowance } = FC_UTILS;
 
 function hideRestrictionToast(){
   const el=document.getElementById('restrictionToast');
@@ -108,7 +108,6 @@ const STATE = {
 
 const dk          = deckKeyFromState();
 const progressKey = 'progress_' + dk;          // read/write
-const dailyKey    = 'np_daily_' + dk;          // read in Home/Test; read/write in New Phrases
 const attemptsKey = 'tm_attempts_v1';          // global attempts
 
 function fireProgressEvent(payload){
@@ -146,7 +145,6 @@ function setExamplesEN(v) {
 async function updateStatusPills(){
   const deckId = deckKeyFromState();
   const progressKey = 'progress_' + deckId;
-  const dailyKey    = 'np_daily_' + deckId;
   const prog  = JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}');
   const attempts = JSON.parse(localStorage.getItem(LS_ATTEMPTS_KEY) || '{}');
   const rows = await loadDeckRows(deckId);
@@ -155,26 +153,29 @@ async function updateStatusPills(){
   const unseenRows = rows.filter(r=>!seen[r.id] && !(attempts[r.id] && attempts[r.id].length > 0));
   const unseenCount = unseenRows.length;
   const enriched = activeRows.map(r=>{
+    const arr = attempts[r.id] || [];
     const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
-    const status = categoryFromPct(acc);
-    return {status};
+    const meta = deriveAttemptMeta(arr);
+    const bucket = getBucketFromAccuracy({
+      accPct: acc,
+      attempts: meta.attempts,
+      lastFails: meta.lastFails,
+      lastFailAt: meta.lastFailAt,
+      isSeen: !!seen[r.id],
+      isAttempted: meta.attempts > 0
+    });
+    return {bucket};
   });
-  const strugglingCount = enriched.filter(x=>x.status==='Struggling').length;
+  const strugglingCount = enriched.filter(x=>x.bucket===BUCKETS.STRUGGLING).length;
   const reviewDue       = await fcGetTestQueueCount();
   await fcUpdateQuizBadge(reviewDue);
-  const daily = loadNewDaily(deckId);
-  const today = todayKey();
-  const usedToday = daily.date === today ? (daily.used || 0) : 0;
-  const updated = getDailyNewAllowance(unseenCount, usedToday, strugglingCount);
-  const allowed = updated.allowed || 0;
-  const used = updated.used || 0;
-  saveNewDaily(deckId, { date: today, allowed, used });
-  const newToday = Math.max(0, allowed - used);
+  const dailyInfo = getDailyNewAllowance(unseenCount, strugglingCount);
+  const newToday = dailyInfo.allowed || 0;
 
   const newEl=document.getElementById('newDisplay');
   if(newEl){
     let txt=`${newToday} new`;
-    if(allowed < SETTINGS.newPerDay && allowed===0 && strugglingCount >= STRUGGLE_CAP){
+    if(newToday===0 && strugglingCount >= STRUGGLE_CAP){
       txt += ` — Paused — too many struggling (${strugglingCount}/${STRUGGLE_CAP})`;
     }
     newEl.textContent=txt;
@@ -298,18 +299,6 @@ function saveProgress(deckId,obj){
   localStorage.setItem(progressKey, JSON.stringify(obj));
   window.fcSaveCloud && window.fcSaveCloud();
 }
-function loadNewDaily(deckId){
-  const dk = deckId || deckKeyFromState();
-  const dailyKey = LS_NEW_DAILY_PREFIX + dk;
-  try{ return JSON.parse(localStorage.getItem(dailyKey) || '{}'); }
-  catch { return {}; }
-}
-function saveNewDaily(deckId,obj){
-  const dk = deckId || deckKeyFromState();
-  const dailyKey = LS_NEW_DAILY_PREFIX + dk;
-  localStorage.setItem(dailyKey, JSON.stringify(obj));
-  window.fcSaveCloud && window.fcSaveCloud();
-}
 function loadAttemptsMap(){
   try{ return JSON.parse(localStorage.getItem(LS_ATTEMPTS_KEY) || '{}'); }
   catch { return {}; }
@@ -322,10 +311,27 @@ function lastNAccuracy(cardId,n=SCORE_WINDOW,map=loadAttemptsMap()){
   const p = arr.filter(a=>a.pass).length;
   return Math.round((p/arr.length)*100);
 }
-function categoryFromPct(p){
-  if (p<50) return 'Struggling';
-  if (p<80) return 'Needs review';
-  return 'Mastered';
+function deriveAttemptMeta(arr){
+  const a = arr || [];
+  let lastFailAt = 0;
+  let lastFails = 0;
+  for(let i=a.length-1;i>=0;i--){
+    const at=a[i];
+    if(at.score === false) continue;
+    if(!at.pass){
+      if(!lastFailAt) lastFailAt = at.ts || 0;
+      lastFails++;
+    }else{
+      break;
+    }
+  }
+  if(!lastFailAt){
+    for(let i=a.length-1;i>=0;i--){
+      const at=a[i];
+      if(at.pass===false){ lastFailAt = at.ts || 0; break; }
+    }
+  }
+  return { attempts:a.length, lastFails, lastFailAt };
 }
 function accuracyHue(p){
   const clamped=Math.max(0,Math.min(100,p));
@@ -447,15 +453,6 @@ async function fcUpdateQuizBadge(raw){
 }
 window.fcUpdateQuizBadge = fcUpdateQuizBadge;
 
-function getDailyNewAllowance(unseenCount, newTodayUsed, strugglingCount){
-  const base = SETTINGS.newPerDay;
-  const factor = Math.max(0, Math.min(1, (STRUGGLE_CAP - strugglingCount) / STRUGGLE_CAP));
-  let allowed = Math.floor(base * factor);
-  allowed = Math.min(allowed, unseenCount);
-  allowed = Math.max(0, Math.min(allowed, base));
-  const used = Math.min(newTodayUsed || 0, allowed);
-  return { allowed, used };
-}
 /* ========= Views ========= */
 function renderTestShell(){
   const wrap=document.createElement('div');
@@ -510,9 +507,19 @@ async function renderLearned(){
   const activeRows = rows.filter(r=>seen[r.id] || (attempts[r.id] && attempts[r.id].length));
 
   const data = activeRows.map(r=>{
+    const arr = attempts[r.id] || [];
     const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
-    const status = acc >= 80 ? 'Mastered' : 'Needs review';
-    const tries = (attempts[r.id]||[]).length;
+    const meta = deriveAttemptMeta(arr);
+    const bucket = getBucketFromAccuracy({
+      accPct: acc,
+      attempts: meta.attempts,
+      lastFails: meta.lastFails,
+      lastFailAt: meta.lastFailAt,
+      isSeen: !!seen[r.id],
+      isAttempted: meta.attempts > 0
+    });
+    const status = BUCKET_LABELS[bucket];
+    const tries = meta.attempts;
     return { ...r, acc, status, tries };
   });
 
@@ -697,10 +704,9 @@ async function renderHome(){
   const rows  = await loadDeckRows(deckId);
   const learned = Object.keys(prog.seen || {}).length;
   const deckPct = rows.length ? Math.round((learned/rows.length)*100) : 0;
-
-  const daily = JSON.parse(localStorage.getItem(dailyKey) || '{}');
-  const allowed = daily.allowed || 0;
-  const used    = daily.used    || 0;
+  const allowance = peekAllowance();
+  const allowed = SETTINGS.newPerDay;
+  const used    = SETTINGS.newPerDay - (allowance.remaining || 0);
   const pct     = allowed ? Math.round((used/allowed)*100) : 0;
 
   wrap.querySelector('#homePhraseRing').style.setProperty('--pct', pct + '%');
@@ -763,30 +769,35 @@ async function renderPhraseDashboard(){
   const unseenCount = unseenRows.length;
 
   const enriched = activeRows.map(r=>{
+    const arr = attempts[r.id] || [];
     const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
-    const status = categoryFromPct(acc);
-    return { ...r, acc, status };
+    const meta = deriveAttemptMeta(arr);
+    const bucket = getBucketFromAccuracy({
+      accPct: acc,
+      attempts: meta.attempts,
+      lastFails: meta.lastFails,
+      lastFailAt: meta.lastFailAt,
+      isSeen: !!seen[r.id],
+      isAttempted: meta.attempts > 0
+    });
+    return { ...r, acc, bucket };
   });
-  const strugglingCount = enriched.filter(x=>x.status==='Struggling').length;
+  const strugglingCount = enriched.filter(x=>x.bucket===BUCKETS.STRUGGLING).length;
   const reviewDue       = await fcGetTestQueueCount();
   const quizToday       = Math.min(reviewDue, SESSION_MAX);
   const quizQueued      = Math.max(reviewDue - SESSION_MAX, 0);
 
   // new phrases allowance
-  const daily = loadNewDaily(deckId);
-  const today = todayKey();
-  const usedToday = daily.date === today ? (daily.used || 0) : 0;
-  const updated = getDailyNewAllowance(unseenCount, usedToday, strugglingCount);
-  const newTodayAllowed = updated.allowed || 0;
-  const used = updated.used || 0;
-  saveNewDaily(deckId, { date: today, allowed: newTodayAllowed, used });
-  const newToday = Math.max(0, newTodayAllowed - used);
-  const restrictedDay = newTodayAllowed < SETTINGS.newPerDay && newToday > 0;
+  const dailyInfo = getDailyNewAllowance(unseenCount, strugglingCount);
+  const newToday = dailyInfo.allowed || 0;
+  const restrictedDay = dailyInfo.baseAllowed < SETTINGS.newPerDay && newToday > 0;
+  const allowanceState = peekAllowance();
+  const used = SETTINGS.newPerDay - (allowanceState.remaining || 0);
 
   let bannerText = '';
   if (restrictedDay) {
     bannerText = 'New phrases reduced';
-  } else if (newTodayAllowed === 0 && strugglingCount >= STRUGGLE_CAP) {
+  } else if (newToday === 0 && strugglingCount >= STRUGGLE_CAP) {
     bannerText = 'New phrases paused';
   }
 
@@ -882,10 +893,10 @@ async function renderPhraseDashboard(){
   }
 
   // daily ring
-  const pct = newTodayAllowed ? Math.round((used/newTodayAllowed)*100) : 0;
+  const pct = SETTINGS.newPerDay ? Math.round((used/SETTINGS.newPerDay)*100) : 0;
   wrap.querySelector('#dailyRing').style.setProperty('--pct', pct + '%');
   wrap.querySelector('#ringTxt').textContent = pct + '%';
-  wrap.querySelector('#dailyLabel').textContent = `${used}/${newTodayAllowed}`;
+  wrap.querySelector('#dailyLabel').textContent = `${used}/${SETTINGS.newPerDay}`;
   wrap.querySelector('#wordsLearned').textContent = learned;
   wrap.querySelector('#deckProg').textContent = `${deckPct}%`;
 

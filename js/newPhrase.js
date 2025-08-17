@@ -21,8 +21,8 @@ function deckKeyFromState() {
 }
 const dk          = deckKeyFromState();
 const progressKey = 'progress_' + dk;          // read/write here
-const dailyKey    = 'np_daily_' + dk;          // read in Test/Study; read/write in New Phrases
 const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchanged, not used here but reserved)
+const { getBucketFromAccuracy, BUCKETS, BUCKET_LABELS, getDailyNewAllowance } = FC_UTILS;
 
 /* Event ping so other modules can react */
 function fireProgressEvent(payload){
@@ -200,23 +200,18 @@ function markSeenNow(cardId){
   const today = new Date().toISOString().slice(0,10);
   const prog = JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}');
   if (!prog.seen) prog.seen = {};
+  const wasSeen = !!prog.seen[cardId];
   const entry = prog.seen[cardId] || { firstSeen: today, seenCount: 0 };
   entry.seenCount += 1;
   entry.lastSeen = today;
   prog.seen[cardId] = entry;
   localStorage.setItem(progressKey, JSON.stringify(prog));
-}
-function bumpDailyUsed(){
-  const daily = JSON.parse(localStorage.getItem(dailyKey) || '{}');
-  if (daily && daily.date){
-    daily.used = Math.min((daily.used||0)+1, daily.allowed||0);
-    localStorage.setItem(dailyKey, JSON.stringify(daily));
-  }
+  if(!wasSeen){ FC_UTILS.consumeNewAllowance(); }
 }
 function canUnlock(allMastered){
   if(allMastered) return true;
-  const daily = JSON.parse(localStorage.getItem(dailyKey) || '{}');
-  return (daily.used || 0) < (daily.allowed || 0);
+  const allowance = FC_UTILS.peekAllowance();
+  return (allowance.remaining || 0) > 0;
 }
 
 /* ---------- Compute “all mastered” using your attempts → accuracy window ---------- */
@@ -233,17 +228,46 @@ function lastNAccuracy(cardId, n = SCORE_WINDOW, map = loadAttemptsMap()){
   const p = arr.filter(a => a.pass).length;
   return Math.round((p / arr.length) * 100);
 }
-function categoryFromPct(p){
-  if (p >= 85) return 'Mastered';
-  if (p >= 60) return 'Strong';
-  if (p >= 40) return 'Developing';
-  return 'Struggling';
+function deriveAttemptMeta(arr){
+  const a = arr || [];
+  let lastFailAt = 0;
+  let lastFails = 0;
+  for(let i=a.length-1;i>=0;i--){
+    const at=a[i];
+    if(at.score === false) continue;
+    if(!at.pass){
+      if(!lastFailAt) lastFailAt = at.ts || 0;
+      lastFails++;
+    }else{
+      break;
+    }
+  }
+  if(!lastFailAt){
+    for(let i=a.length-1;i>=0;i--){
+      const at=a[i];
+      if(at.pass===false){ lastFailAt = at.ts || 0; break; }
+    }
+  }
+  return { attempts:a.length, lastFails, lastFailAt };
 }
 function computeAllMastered(deckId, prog){
   const attempts = loadAttemptsMap();
   const ids = Object.keys(prog.seen || {});
   if(!ids.length) return true;
-  return ids.every(id => categoryFromPct(lastNAccuracy(id, SCORE_WINDOW, attempts)) === 'Mastered');
+  return ids.every(id => {
+    const arr = attempts[id] || [];
+    const acc = lastNAccuracy(id, SCORE_WINDOW, attempts);
+    const meta = deriveAttemptMeta(arr);
+    const bucket = getBucketFromAccuracy({
+      accPct: acc,
+      attempts: meta.attempts,
+      lastFails: meta.lastFails,
+      lastFailAt: meta.lastFailAt,
+      isSeen: true,
+      isAttempted: meta.attempts > 0
+    });
+    return bucket === BUCKETS.MASTERED;
+  });
 }
 
 /* ---------- Optional: push to GitHub if token+repo present ---------- */
@@ -329,17 +353,6 @@ async function renderNewPhrase(){
   viewEl=host.querySelector('#np-root');
   host.querySelector('#np-day').textContent=getDayNumber?.() || '—';
 
-  // migrate daily key variant if necessary (kept)
-  (function migrateDailyIfNeeded(){
-    const canonical = dailyKey;
-    const legacy    = 'np_daily_' + ((window.STATE && STATE.activeDeckId) || '');
-    if (canonical !== legacy) {
-      const legacyVal = localStorage.getItem(legacy);
-      const nothing = localStorage.getItem(canonical);
-      if (legacyVal && !nothing) localStorage.setItem(canonical, legacyVal);
-    }
-  })();
-
   try {
     deckRows = await loadDeckRows(dk);
     const prog = loadProgress(dk);
@@ -389,18 +402,23 @@ async function renderNewPhrase(){
     // Daily allowance
     const activeRows = deckRows.filter(r => seenIds.has(r.id) || (attempts[r.id] || []).length);
     const enriched = activeRows.map(r=>{
+      const arr = attempts[r.id] || [];
       const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
-      const status = categoryFromPct(acc);
-      return {status};
+      const meta = deriveAttemptMeta(arr);
+      const bucket = getBucketFromAccuracy({
+        accPct: acc,
+        attempts: meta.attempts,
+        lastFails: meta.lastFails,
+        lastFailAt: meta.lastFailAt,
+        isSeen: seenIds.has(r.id),
+        isAttempted: meta.attempts > 0
+      });
+      return {bucket};
     });
-    const strugglingCount = enriched.filter(x=>x.status==='Struggling').length;
+    const strugglingCount = enriched.filter(x=>x.bucket===BUCKETS.STRUGGLING).length;
 
-    const prev = loadNewDaily(dk);
-    const dayKey = todayKey();
-    const usedToday = prev.date === dayKey ? (prev.used || 0) : 0;
-    const daily = getDailyNewAllowance(unseenCards.length, usedToday, strugglingCount);
-    saveNewDaily(dk, { date: dayKey, ...daily });
-    newRemainingToday = Math.max(0, (daily.allowed || 0) - (daily.used || 0));
+    const daily = getDailyNewAllowance(unseenCards.length, strugglingCount);
+    newRemainingToday = daily.allowed || 0;
     queue = unseenCards.slice(0, newRemainingToday);
     const pill=host.querySelector('#np-allowance');
     const wrap=host.querySelector('#np-day-wrap');
@@ -569,7 +587,6 @@ function render(){
       const ok=equalsLoose(inp.value||'', c.front);
       if(ok){
         markSeenNow(c.id);
-        bumpDailyUsed();
         tickDay && tickDay();
         newRemainingToday = Math.max(0, newRemainingToday - 1);
         updateAllowancePill();
