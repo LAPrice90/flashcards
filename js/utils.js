@@ -80,6 +80,33 @@
     return { remaining: state.remaining };
   }
 
+  function deckKeyFromState(){
+    const map = {
+      'Welsh – A1 Phrases': 'welsh_phrases_A1',
+      'Welsh - A1 Phrases': 'welsh_phrases_A1',
+      'welsh_a1': 'welsh_phrases_A1'
+    };
+    const id = (global.STATE && global.STATE.activeDeckId) || '';
+    return map[id] || id || 'welsh_phrases_A1';
+  }
+
+  function logReview(phrase, result){
+    const id = typeof phrase === 'string' ? phrase : phrase && phrase.id;
+    if(!id) return;
+    const progressKey = 'progress_' + deckKeyFromState();
+    let prog;
+    try{ prog = JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}'); }
+    catch{ prog = { seen:{} }; }
+    const seen = prog.seen || {};
+    const entry = seen[id] || {};
+    const reviews = entry.reviews || [];
+    reviews.push({ date: new Date().toISOString(), result });
+    entry.reviews = reviews;
+    seen[id] = entry;
+    prog.seen = seen;
+    localStorage.setItem(progressKey, JSON.stringify(prog));
+  }
+
   global.FC_UTILS = {
     BUCKETS,
     BUCKET_LABELS,
@@ -89,4 +116,6 @@
     consumeNewAllowance,
     peekAllowance
   };
+
+  global.logReview = logReview;
 })(window);

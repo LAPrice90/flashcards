@@ -1202,6 +1202,7 @@ function fireProgressEvent(payload){
     const pass = !skip && equalsLoose(val, c.front);
     if (pass) tickDay();
     logAttempt(c.id, pass, { forceNoScore: practiceMode });
+    logReview(c, pass ? 'pass' : 'fail');
     fireProgressEvent({ type:'attempt', id: c.id, pass });
     if (pass) {
       correct++;
@@ -1232,6 +1233,7 @@ function fireProgressEvent(payload){
         const val = inp.value || '';
         const ok = equalsLoose(val, card.front);
         logAttempt(card.id, ok, { forceNoScore: true });
+        logReview(card, ok ? 'pass' : 'fail');
         fireProgressEvent({ type:'attempt', id: card.id, pass: ok });
         if (ok) {
           if (step === 1) copyStep(2);
@@ -1263,6 +1265,7 @@ function fireProgressEvent(payload){
         const ok = equalsLoose(val, card.front);
         if (ok) tickDay();
         const counted = logAttempt(card.id, ok, { forceNoScore: practiceMode });
+        logReview(card, ok ? 'pass' : 'fail');
         fireProgressEvent({ type:'attempt', id: card.id, pass: ok });
         if (ok) {
           showResult(true, val, { scoreCounted: counted });

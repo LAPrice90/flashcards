@@ -404,6 +404,7 @@
       behaviour: behaviour.kind,
       forceNoScore: practiceMode
     });
+    logReview(c, pass ? 'pass' : 'fail');
 
     fireProgressEvent({ type:'attempt', id:c.id, pass });
 
@@ -446,6 +447,7 @@
         const val = inp.value || '';
         const ok = equalsLoose(val, card.front);
         logAttempt(card.id, ok, { behaviour: localTracker.classify().kind, forceNoScore: true });
+        logReview(card, ok ? 'pass' : 'fail');
         fireProgressEvent({ type:'attempt', id: card.id, pass: ok });
         if (ok){
           if (step===1) copyStep(2);
@@ -479,6 +481,7 @@
         const val = inp.value || '';
         const ok = equalsLoose(val, card.front);
         const counted = logAttempt(card.id, ok, { behaviour: localTracker.classify().kind, forceNoScore: practiceMode });
+        logReview(card, ok ? 'pass' : 'fail');
         fireProgressEvent({ type:'attempt', id: card.id, pass: ok });
         if (ok){
           if (counted && !practiceMode) tickDay && tickDay();
