@@ -233,10 +233,7 @@
       const bucket = FC_UTILS.getBucketFromAccuracy({
         accPct: acc,
         attempts: meta.attempts,
-        lastFails: meta.lastFails,
-        lastFailAt: meta.lastFailAt,
-        isSeen: !!seenMap[c.id],
-        isAttempted: meta.attempts > 0
+        introducedAt: seenMap[c.id] && seenMap[c.id].firstSeen
       });
       c.conf = acc;
       c.isStruggling = bucket === FC_UTILS.BUCKETS.STRUGGLING;

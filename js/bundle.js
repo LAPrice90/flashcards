@@ -1877,7 +1877,7 @@ async function getPhraseBuckets(deckId){
     if(!seen[r.id] && arr.length===0){counts.untested++;return;}
     if(arr.length===0){counts.new++;counts.total++;return;}
     const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
-    const bucket = FC_UTILS.getBucketFromAccuracy({accPct:acc,attempts:arr.length,lastFails,lastFailAt,isSeen:!!seen[r.id],isAttempted:arr.length>0});
+    const bucket = FC_UTILS.getBucketFromAccuracy({accPct:acc,attempts:arr.length,introducedAt:seen[r.id]?seen[r.id].firstSeen:undefined});
     if(bucket===FC_UTILS.BUCKETS.STRUGGLING) counts.struggling++;
     else if(bucket===FC_UTILS.BUCKETS.MASTERED) counts.mastered++;
     else counts.review++;
@@ -1972,10 +1972,7 @@ async function renderLearned(){
     const bucket = FC_UTILS.getBucketFromAccuracy({
       accPct: acc,
       attempts: arr.length,
-      lastFails,
-      lastFailAt,
-      isSeen: !!seen[r.id],
-      isAttempted: arr.length > 0
+      introducedAt: seen[r.id]?seen[r.id].firstSeen:undefined
     });
     const status = FC_UTILS.BUCKET_LABELS[bucket];
     const tries = arr.length;

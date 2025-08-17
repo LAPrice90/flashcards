@@ -2,7 +2,7 @@
   const BUCKETS = {
     NEW: 'NEW',
     STRUGGLING: 'STRUGGLING',
-    NEEDS_WORK: 'NEEDS_WORK',
+    NEEDS_REVIEW: 'NEEDS_REVIEW',
     CONFIDENT: 'CONFIDENT',
     MASTERED: 'MASTERED'
   };
@@ -10,7 +10,7 @@
   const BUCKET_LABELS = {
     NEW: 'New',
     STRUGGLING: 'Struggling',
-    NEEDS_WORK: 'Needs work',
+    NEEDS_REVIEW: 'Needs review',
     CONFIDENT: 'Confident',
     MASTERED: 'Mastered'
   };
@@ -23,17 +23,15 @@
 
   function getBucketFromAccuracy(opts){
     const {
-      accPct = 0,
+      introducedAt,
       attempts = 0,
-      lastFails = 0,
-      lastFailAt = 0,
-      isSeen = false,
-      isAttempted = false
+      accPct = 0
     } = opts || {};
 
-    if(isSeen && attempts === 0) return BUCKETS.NEW;
-    if(attempts > 0 && (accPct < 50 || lastFails >= 2 || (lastFailAt && (Date.now() - lastFailAt) < 48*3600*1000))) return BUCKETS.STRUGGLING;
-    if(accPct < 80) return BUCKETS.NEEDS_WORK;
+    if(!introducedAt) return null;
+    if(attempts === 0) return BUCKETS.NEW;
+    if(accPct < 50) return BUCKETS.STRUGGLING;
+    if(accPct < 80) return BUCKETS.NEEDS_REVIEW;
     if(accPct < 90) return BUCKETS.CONFIDENT;
     return BUCKETS.MASTERED;
   }

@@ -261,10 +261,7 @@ function computeAllMastered(deckId, prog){
     const bucket = getBucketFromAccuracy({
       accPct: acc,
       attempts: meta.attempts,
-      lastFails: meta.lastFails,
-      lastFailAt: meta.lastFailAt,
-      isSeen: true,
-      isAttempted: meta.attempts > 0
+      introducedAt: prog.seen[id] && prog.seen[id].firstSeen
     });
     return bucket === BUCKETS.MASTERED;
   });
@@ -408,10 +405,7 @@ async function renderNewPhrase(){
       const bucket = getBucketFromAccuracy({
         accPct: acc,
         attempts: meta.attempts,
-        lastFails: meta.lastFails,
-        lastFailAt: meta.lastFailAt,
-        isSeen: seenIds.has(r.id),
-        isAttempted: meta.attempts > 0
+        introducedAt: prog.seen[r.id] && prog.seen[r.id].firstSeen
       });
       return {bucket};
     });
