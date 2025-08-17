@@ -207,6 +207,7 @@ function markSeenNow(cardId){
   if(!entry.introducedAt) entry.introducedAt = new Date().toISOString();
   if(typeof entry.interval !== 'number') entry.interval = 1;
   entry.interval = FC_UTILS.clampInterval(entry.interval);
+  if(!wasSeen || !entry.dueDate) entry.dueDate = FC_UTILS.calcDueDate(1);
   prog.seen[cardId] = entry;
   localStorage.setItem(progressKey, JSON.stringify(prog));
   if(!wasSeen){ FC_UTILS.consumeNewAllowance(); }

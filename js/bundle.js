@@ -135,16 +135,17 @@ function fireProgressEvent(payload){
     const prog = JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}');
     if (!prog.seen) prog.seen = {};
     const wasSeen = !!prog.seen[cardId];
-    const entry = prog.seen[cardId] || { firstSeen: today, seenCount: 0 };
-    entry.seenCount += 1;
-    entry.lastSeen = today;
-    if(!entry.introducedAt) entry.introducedAt = new Date().toISOString();
-    if(typeof entry.interval !== 'number') entry.interval = 1;
-    entry.interval = FC_UTILS.clampInterval(entry.interval);
-    prog.seen[cardId] = entry;
-    localStorage.setItem(progressKey, JSON.stringify(prog));
-    if(!wasSeen){ FC_UTILS.consumeNewAllowance(); }
-  }
+  const entry = prog.seen[cardId] || { firstSeen: today, seenCount: 0 };
+  entry.seenCount += 1;
+  entry.lastSeen = today;
+  if(!entry.introducedAt) entry.introducedAt = new Date().toISOString();
+  if(typeof entry.interval !== 'number') entry.interval = 1;
+  entry.interval = FC_UTILS.clampInterval(entry.interval);
+  if(!wasSeen || !entry.dueDate) entry.dueDate = FC_UTILS.calcDueDate(1);
+  prog.seen[cardId] = entry;
+  localStorage.setItem(progressKey, JSON.stringify(prog));
+  if(!wasSeen){ FC_UTILS.consumeNewAllowance(); }
+}
 
   function bumpDailyUsed(){
     const daily = JSON.parse(localStorage.getItem(dailyKey) || '{}');
@@ -1108,7 +1109,8 @@ function fireProgressEvent(payload){
     const attempts = loadAttempts();
     const session = (()=>{ try{ return JSON.parse(localStorage.getItem(SESSION_KEY) || '{}'); } catch{ return {}; } })();
     const doneSet = new Set(session.done || []);
-    const now = Date.now();
+    const today = new Date(); today.setHours(0,0,0,0);
+    const now = today.getTime();
     const active = deck.filter(c => {
       if (!isActiveCard(c.id, seen, attempts)) return false;
       if (doneSet.has(c.id)) return false;
@@ -1120,8 +1122,13 @@ function fireProgressEvent(payload){
           break;
         }
       }
+      const dueStr = seen[c.id] && seen[c.id].dueDate;
+      const due = dueStr ? Date.parse(dueStr) : 0;
+      if(due > now) return false;
+      c.due = due;
       return true;
     });
+    active.sort((a,b)=>a.due - b.due);
     console.log('[active-count]', deckKeyFromState(), active.length);
     console.log('[progress-key-used]', progressKey);
     return active;
@@ -1357,20 +1364,13 @@ function fireProgressEvent(payload){
             return;
           }
         } else {
-          container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">No introduced cards to test. Use New Phrases to unlock today’s set.</div></div>`;
+          container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">No introduced cards due. Use New Phrases or come back later.</div></div>`;
           return;
         }
       }
-      const attemptsMap = loadAttempts();
-      active.forEach(c=>{ c.conf = lastNAccuracy(c.id, SCORE_WINDOW, attemptsMap); });
-      const groups = {};
-      active.forEach(c=>{ (groups[c.conf] = groups[c.conf] || []).push(c); });
-      const confKeys = Object.keys(groups).map(Number).sort((a,b)=>a-b);
-      active = confKeys.flatMap(conf=>shuffle(groups[conf]));
       sessionDue = Math.min(active.length, SESSION_MAX);
       if(window.fcUpdateQuizBadge) window.fcUpdateQuizBadge(active.length);
-      active = active.slice(0, SESSION_MAX);
-      deck = active;
+      deck = active.slice(0, SESSION_MAX);
       idx = 0; correct = 0; wrong = [];
       renderCard();
     } catch (e) {
@@ -1881,7 +1881,8 @@ async function fcGetTestQueueCount(){
   const activeRows = rows.filter(r => seen[r.id] || (attempts[r.id] && attempts[r.id].length > 0));
   const session = (()=>{ try{ return JSON.parse(localStorage.getItem(LS_TEST_SESSION) || '{}'); } catch{ return {}; } })();
   const doneSet = new Set(session.done || []);
-  const now = Date.now();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const now = today.getTime();
   return activeRows.filter(r=>{
     if(doneSet.has(r.id)) return false;
     const arr = attempts[r.id] || [];
@@ -1892,6 +1893,9 @@ async function fcGetTestQueueCount(){
         break;
       }
     }
+    const dueStr = seen[r.id] && seen[r.id].dueDate;
+    const due = dueStr ? Date.parse(dueStr) : 0;
+    if(due > now) return false;
     return true;
   }).length;
 }
