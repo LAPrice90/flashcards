@@ -117,6 +117,8 @@ async function renderReview(query) {
   }
   let showBack = false;   // front(Welsh) → back(English) in flash mode
   let slowNext = false;   // audio alternator
+  let isExpanded = false; // details panel state
+  let isAnimating = false; // slide debounce
 
   const wrap = document.createElement('div');
   wrap.innerHTML = `
@@ -127,6 +129,7 @@ async function renderReview(query) {
       </div>
       <div class="learn-card-content card--center">
         <div class="flashcard" id="flashcard">
+        <div class="fc-stage fc-edge-hint" id="fcStage">
 
         <div class="flashcard-image" id="fcImg"></div>
 
@@ -143,6 +146,7 @@ async function renderReview(query) {
           <div class="example" id="fcExample"></div>
           <div class="patterns" id="fcPatterns"></div>
         </div>
+        </div>
 
         <div class="flashcard-actions">
           <button class="btn nav-btn" id="prevBtn">Previous</button>
@@ -150,13 +154,14 @@ async function renderReview(query) {
           <a class="btn end-btn" href="#/phrases">End Session</a>
         </div>
 
-        <div class="flashcard-progress muted" id="fcProg"></div>
+        <div class="flashcard-progress muted" id="fcProg" aria-live="polite"></div>
         </div>
       </div>
     </section>
   `;
 
   const root       = wrap.querySelector('#flashcard');
+  const stageEl    = wrap.querySelector('#fcStage');
   const imgEl      = wrap.querySelector('#fcImg');
   const termEl     = wrap.querySelector('#fcTerm');
   const phonEl     = wrap.querySelector('#fcPhon');
@@ -178,6 +183,7 @@ async function renderReview(query) {
     expandBtn.textContent = expand ? '−' : '+';
     expandBtn.setAttribute('aria-label', expand ? 'Hide details' : 'Show details');
     expandBtn.setAttribute('aria-expanded', expand);
+    isExpanded = expand;
     if (expand) {
       detailsEl.hidden = false;
       if (animate) {
@@ -234,7 +240,7 @@ async function renderReview(query) {
   // render card
   function renderCard() {
     const c = cards[idx];
-    const isExpanded = !!expanded[c.id];
+    const expand = !!expanded[c.id];
 
     // image
     imgEl.innerHTML = c.image
@@ -325,8 +331,49 @@ async function renderReview(query) {
     // click-to-flip behaviour
     termEl.style.cursor = 'pointer';
 
-    applyExpand(isExpanded, false);
+    applyExpand(expand, false);
   }
+
+  function navigate(dir, fromSwipe){
+    if (isAnimating && !fromSwipe) return;
+    isAnimating = true;
+    const hadPlayFocus = document.activeElement === audioBtn;
+    stopAudio();
+
+    const update = () => {
+      idx = (idx + (dir === 1 ? 1 : -1) + cards.length) % cards.length;
+      showBack = false;
+      renderCard();
+      stageEl.style.transition = 'none';
+      stageEl.style.transform = `translateX(${dir === 1 ? 100 : -100}%)`;
+      requestAnimationFrame(() => {
+        stageEl.style.transition = 'transform 200ms ease-out, opacity 200ms ease-out';
+        stageEl.style.transform = 'translateX(0)';
+        stageEl.style.opacity = '1';
+        stageEl.addEventListener('transitionend', () => {
+          stageEl.style.transition = '';
+          isAnimating = false;
+          if (hadPlayFocus) audioBtn.focus();
+          slowNext = false;
+          const c = cards[idx];
+          if (c.audio) playAudio(c.audio);
+        }, { once: true });
+      });
+    };
+
+    if (fromSwipe) {
+      update();
+    } else {
+      stageEl.classList.remove('swiping');
+      stageEl.style.transition = 'transform 200ms ease-out, opacity 200ms ease-out';
+      stageEl.style.transform = `translateX(${dir === 1 ? -100 : 100}%)`;
+      stageEl.style.opacity = '0.9';
+      stageEl.addEventListener('transitionend', update, { once: true });
+    }
+  }
+
+  const goNext = () => navigate(1);
+  const goPrev = () => navigate(-1);
 
   // initial render
   renderCard();
@@ -344,35 +391,82 @@ async function renderReview(query) {
     const c = cards[idx];
     if (c.audio) playAudio(c.audio);
   });
-    termEl.addEventListener('click', () => {
-      showBack = !showBack;
-      renderCard();
+  termEl.addEventListener('click', () => {
+    showBack = !showBack;
+    renderCard();
+  });
+  nextBtn.addEventListener('click', goNext);
+  prevBtn.addEventListener('click', goPrev);
+
+  // swipe navigation
+  let startX = 0, startY = 0, startT = 0, swiping = false;
+  function onPointerDown(e){
+    if (isAnimating || isExpanded) return;
+    if (e.pointerType === 'mouse') return;
+    if (e.target.closest('#audioBtn') || e.target.closest('#detailToggle')) return;
+    startX = e.clientX; startY = e.clientY; startT = Date.now(); swiping = false;
+    stageEl.addEventListener('pointermove', onPointerMove, { passive: true });
+    stageEl.addEventListener('pointerup', onPointerUp);
+    stageEl.addEventListener('pointercancel', onPointerCancel);
+  }
+  function onPointerMove(e){
+    const dx = e.clientX - startX;
+    const dy = e.clientY - startY;
+    if (!swiping){
+      if (Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10){
+        swiping = true;
+        stageEl.classList.add('swiping');
+        stageEl.removeEventListener('pointermove', onPointerMove);
+        stageEl.addEventListener('pointermove', onPointerMove, { passive: false });
+      } else { return; }
+    }
+    e.preventDefault();
+    requestAnimationFrame(() => {
+      const t = dx * 0.35;
+      const dist = Math.abs(dx);
+      const opacity = Math.max(0.9, 1 - dist / 1000);
+      const scale = dist > 80 ? 0.995 : 1;
+      stageEl.style.transform = `translateX(${t}px) scale(${scale})`;
+      stageEl.style.opacity = String(opacity);
     });
-  nextBtn.addEventListener('click', () => {
-    stopAudio();
-    idx = (idx + 1) % cards.length;
-    showBack = false;
-    renderCard();
-    // autoplay next card at normal speed
-    slowNext = false;
-    const c = cards[idx];
-    if (c.audio) playAudio(c.audio);
-  });
-  prevBtn.addEventListener('click', () => {
-    stopAudio();
-    idx = (idx - 1 + cards.length) % cards.length;
-    showBack = false;
-    renderCard();
-    // autoplay previous card at normal speed
-    slowNext = false;
-    const c = cards[idx];
-    if (c.audio) playAudio(c.audio);
-  });
+  }
+  function resetStage(){
+    stageEl.classList.remove('swiping');
+    stageEl.style.transition = 'transform 160ms ease, opacity 160ms ease';
+    stageEl.style.transform = 'translateX(0)';
+    stageEl.style.opacity = '1';
+    stageEl.addEventListener('transitionend', () => { stageEl.style.transition = ''; }, { once: true });
+  }
+  function onPointerUp(e){
+    stageEl.removeEventListener('pointermove', onPointerMove);
+    stageEl.removeEventListener('pointerup', onPointerUp);
+    stageEl.removeEventListener('pointercancel', onPointerCancel);
+    if (!swiping){ return; }
+    const dx = e.clientX - startX;
+    const elapsed = Date.now() - startT;
+    const absDx = Math.abs(dx);
+    const success = absDx > 60 || (absDx > 30 && elapsed < 220);
+    if (!success){ resetStage(); return; }
+    isAnimating = true;
+    const dir = dx < 0 ? 1 : -1;
+    stageEl.classList.remove('swiping');
+    stageEl.style.transition = 'transform 200ms ease-out, opacity 200ms ease-out';
+    stageEl.style.transform = `translateX(${dir === 1 ? -100 : 100}%)`;
+    stageEl.style.opacity = '0.9';
+    stageEl.addEventListener('transitionend', () => navigate(dir, true), { once: true });
+  }
+  function onPointerCancel(){
+    stageEl.removeEventListener('pointermove', onPointerMove);
+    stageEl.removeEventListener('pointerup', onPointerUp);
+    stageEl.removeEventListener('pointercancel', onPointerCancel);
+    resetStage();
+  }
+  stageEl.addEventListener('pointerdown', onPointerDown);
 
   // keyboard (desktop convenience)
   window.onkeydown = (e) => {
-    if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); nextBtn.click(); }
-    if (e.key === 'ArrowLeft') { e.preventDefault(); prevBtn.click(); }
+    if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); goNext(); }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev(); }
     if (e.key?.toLowerCase() === 'a') { e.preventDefault(); audioBtn.click(); }
     if (e.key?.toLowerCase() === 'f') { e.preventDefault(); termEl.click(); }
   };
