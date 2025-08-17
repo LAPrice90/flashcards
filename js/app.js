@@ -711,11 +711,21 @@ async function renderHome(){
       <aside class="sidebar">
         <div class="panel-white stat-card" id="stat-phrases">
           <div class="panel-title">Phrases</div>
-          <div class="ring" id="homePhraseRing"><span id="homePhraseRingTxt">0%</span></div>
-          <div class="list">
-            <div><span class="k">Today</span> · <span class="v" id="homePhraseToday">0/0</span></div>
-            <div><span class="k">Deck progress</span> · <span class="v" id="homePhraseProgLabel">0%</span></div>
+          <div class="donut-chart">
+            <canvas id="deckStatusChart" role="img"></canvas>
+            <div class="donut-center" id="deckStatusTotal">0</div>
           </div>
+          <div class="donut-legend" id="deckStatusLegend"></div>
+          <div class="list">
+            <div><span class="k">Today</span> · <span class="v" id="dailyLabel">0/0</span></div>
+            <div><span class="k">Streak</span> · <span class="v" id="streakNum">–</span></div>
+            <div><span class="k">Words learned</span> · <span class="v" id="wordsLearned">–</span></div>
+            <div><span class="k">Deck progress</span> · <span class="v" id="deckProg">–</span></div>
+          </div>
+        </div>
+        <div class="panel-white stat-card">
+          <div class="panel-title">Progress</div>
+          <div class="progress" id="xpBar"><i></i></div>
         </div>
         <div class="panel-white stat-card">
           <div class="panel-title">Words</div>
@@ -762,14 +772,41 @@ async function renderHome(){
   const learned = Object.keys(prog.seen || {}).length;
   const deckPct = rows.length ? Math.round((learned/rows.length)*100) : 0;
   const allowance = peekAllowance();
-  const allowed = SETTINGS.newPerDay;
   const used    = SETTINGS.newPerDay - (allowance.remaining || 0);
-  const pct     = allowed ? Math.round((used/allowed)*100) : 0;
 
-  wrap.querySelector('#homePhraseRing').style.setProperty('--pct', pct + '%');
-  wrap.querySelector('#homePhraseRingTxt').textContent = pct + '%';
-  wrap.querySelector('#homePhraseToday').textContent = `${used}/${allowed}`;
-  wrap.querySelector('#homePhraseProgLabel').textContent = `${deckPct}%`;
+  wrap.querySelector('#dailyLabel').textContent = `${used}/${SETTINGS.newPerDay}`;
+  wrap.querySelector('#wordsLearned').textContent = learned;
+  wrap.querySelector('#deckProg').textContent = `${deckPct}%`;
+  const buckets = await getPhraseBuckets(deckId);
+  const total = buckets.total;
+  wrap.querySelector('#deckStatusTotal').textContent = total;
+  const canvas = wrap.querySelector('#deckStatusChart');
+  const legendEl = wrap.querySelector('#deckStatusLegend');
+  if(typeof Chart !== 'undefined'){
+    if(total === 0){
+      new Chart(canvas.getContext('2d'),{
+        type:'doughnut',
+        data:{datasets:[{data:[1],backgroundColor:['#E0E0E0'],borderWidth:0}]},
+        options:{cutout:'64%',plugins:{legend:{display:false},tooltip:{enabled:false}}}
+      });
+      legendEl.textContent = 'No active phrases yet';
+      legendEl.classList.add('muted');
+      canvas.setAttribute('aria-label','No active phrases yet');
+    }else{
+      const labels=['Mastered','Needs review','Struggling','New'];
+      const data=[buckets.mastered,buckets.needsReview,buckets.struggling,buckets.new];
+      const colors=['#0B8457','#FFB200','#D7263D','#1E88E5'];
+      new Chart(canvas.getContext('2d'),{
+        type:'doughnut',
+        data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0}]},
+        options:{cutout:'64%',plugins:{legend:{display:false},tooltip:{enabled:false}},responsive:true,maintainAspectRatio:false}
+      });
+      legendEl.innerHTML = labels.map((l,i)=>`<span class="item"><span class="dot" style="background:${colors[i]}"></span>${l} ${data[i]}</span>`).join('');
+      legendEl.classList.remove('muted');
+      canvas.setAttribute('aria-label', labels.map((l,i)=>`${l} ${data[i]}`).join(', '));
+    }
+  }
+  wrap.querySelector('#xpBar').style.setProperty('--w', deckPct + '%');
 
   return wrap;
 }
