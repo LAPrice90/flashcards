@@ -255,6 +255,7 @@
   let practiceMode = false;
   let seenThisSession = new Set();
   let tracker = null; // behaviour tracker for the active card
+  let sessionDue = 0;
 
   function resetSession(){ localStorage.setItem(SESSION_KEY, JSON.stringify({ done: [] })); }
   function markSessionDone(id){
@@ -544,6 +545,7 @@
         ${gateInfo}
       </div>`;
     window.dispatchEvent(new CustomEvent('fc:module-complete',{ detail:{ module:'test' }}));
+    if(window.fcUpdateQuizBadge) window.fcUpdateQuizBadge();
   }
 
   /* ---------- Flow ---------- */
@@ -554,6 +556,8 @@
     try{
       // Build "due" list and cap to session size
       const due = await buildActiveList();
+      sessionDue = Math.min(due.length, SESSION_MAX);
+      if(window.fcUpdateQuizBadge) window.fcUpdateQuizBadge(due.length);
       if (!due.length){
         container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">No introduced cards due. Use New Phrases or come back later.</div></div>`;
         return;
@@ -570,7 +574,10 @@
   function routeName(){ const raw = location.hash.startsWith('#/') ? location.hash.slice(2) : 'home'; return (raw.split('?')[0] || 'home'); }
 
   async function mountIfTestRoute(){
-    if (routeName() !== 'test') return;
+    if (routeName() !== 'test'){
+      if(window.fcUpdateQuizBadge) window.fcUpdateQuizBadge();
+      return;
+    }
 
     document.querySelectorAll('.nav a').forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#/test'));
 
