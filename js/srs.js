@@ -133,3 +133,7 @@ export default {
   nextIntervalsForNew,
   applyIntroPath
 };
+
+if (typeof window !== 'undefined') {
+  window.FC_SRS = { scheduleNextReview, nextIntervalsForNew, applyIntroPath, persistCard };
+}

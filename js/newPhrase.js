@@ -23,6 +23,7 @@ const dk          = deckKeyFromState();
 const progressKey = 'progress_' + dk;          // read/write here
 const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchanged, not used here but reserved)
 const { getBucket, BUCKETS, BUCKET_LABELS, getDailyNewAllowance } = FC_UTILS;
+const FC_SRS = window.FC_SRS || {};
 
 /* Event ping so other modules can react */
 function fireProgressEvent(payload){
@@ -202,15 +203,21 @@ function markSeenNow(cardId){
   if (!prog.seen) prog.seen = {};
   const wasSeen = !!prog.seen[cardId];
   const entry = prog.seen[cardId] || { firstSeen: today, seenCount: 0 };
-  entry.seenCount += 1;
   entry.lastSeen = today;
-  if(!entry.introducedAt) entry.introducedAt = new Date().toISOString();
-  if(typeof entry.interval !== 'number') entry.interval = 1;
-  entry.interval = FC_UTILS.clampInterval(entry.interval);
-  if(!wasSeen || !entry.dueDate) entry.dueDate = FC_UTILS.calcDueDate(1);
+  if(!wasSeen){
+    entry.seenCount = 1;
+    entry.introducedAt = new Date().toISOString();
+    // Intro step 0: schedule same-day review
+    const card = { id: cardId, introducedAt: entry.introducedAt };
+    FC_SRS.applyIntroPath && FC_SRS.applyIntroPath(card, 0);
+    FC_SRS.persistCard && FC_SRS.persistCard(card);
+    entry.interval = card.interval;
+    entry.dueDate = card.dueDate;
+    FC_UTILS.consumeNewAllowance();
+  }
   prog.seen[cardId] = entry;
   localStorage.setItem(progressKey, JSON.stringify(prog));
-  if(!wasSeen){ FC_UTILS.consumeNewAllowance(); }
+  return { wasSeen, entry };
 }
 function canUnlock(allMastered){
   if(allMastered) return true;
@@ -457,6 +464,11 @@ function render(){
     : `<div class="no-image muted">No image</div>`;
 
   if(step===STEPS.WELSH){
+    const seenMeta = markSeenNow(c.id);
+    if(seenMeta && !seenMeta.wasSeen){
+      newRemainingToday = Math.max(0, newRemainingToday - 1);
+      updateAllowancePill();
+    }
     viewEl.innerHTML=`
       <div class="flashcard-image">${img}</div>
       <div class="term" style="margin-top:8px;">${escapeHTML(c.front)}</div>
@@ -584,14 +596,22 @@ function render(){
       if(behaviour.kind === 'idle') return renderTimeoutCard(() => render()); // idle → no penalty
       const ok=equalsLoose(inp.value||'', c.front);
       if(ok){
-        markSeenNow(c.id);
+        const prog = loadProgress(dk);
+        const entry = prog.seen && prog.seen[c.id];
+        // Intro step 1: schedule tomorrow's review
+        const card = { id: c.id, introducedAt: entry && entry.introducedAt };
+        FC_SRS.applyIntroPath && FC_SRS.applyIntroPath(card, 1);
+        FC_SRS.persistCard && FC_SRS.persistCard(card);
+        if(entry){
+          entry.interval = card.interval;
+          entry.dueDate = card.dueDate;
+          prog.seen[c.id] = entry;
+          localStorage.setItem(progressKey, JSON.stringify(prog));
+        }
         tickDay && tickDay();
-        newRemainingToday = Math.max(0, newRemainingToday - 1);
-        updateAllowancePill();
         fireProgressEvent({ type: 'introduced', id: c.id });
 
         // cloud sync if configured
-        const prog = loadProgress(dk);
         syncProgressToGitHub(dk, prog);
         initDeckPicker && initDeckPicker();
 
@@ -601,7 +621,7 @@ function render(){
           <div class="term" style="margin-top:-6px;">${escapeHTML(c.front)}</div>
           <div class="tm-audio" style="margin-top:6px;"><button class="btn audio-btn" id="np-play">🔊 Play</button></div>
           <div class="flashcard-actions"><button class="btn green" id="np-next">Next word</button></div>
-          <div class="flashcard-progress muted">Great! Audio plays automatically.</div>`;
+          <div class="flashcard-progress muted">Next review: Tomorrow</div>`;
         playAudio(c.audio,1.0);
         viewEl.querySelector('#np-play').addEventListener('click',()=>playAudio(c.audio,1.0));
         viewEl.querySelector('#np-next').addEventListener('click',nextCard);
