@@ -1862,6 +1862,30 @@ async function fcUpdateQuizBadge(raw){
 }
 window.fcUpdateQuizBadge = fcUpdateQuizBadge;
 
+async function getPhraseBuckets(deckId){
+  const dk = deckId || deckKeyFromState();
+  const prog = JSON.parse(localStorage.getItem('progress_' + dk) || '{"seen":{}}');
+  const attempts = loadAttemptsMap();
+  const rows = await loadDeckRows(dk);
+  const seen = prog.seen || {};
+  const counts = { new:0, untested:0, struggling:0, review:0, mastered:0, total:0 };
+  rows.forEach(r=>{
+    const arr = attempts[r.id] || [];
+    let lastFailAt=0,lastFails=0;
+    for(let i=arr.length-1;i>=0;i--){const at=arr[i];if(at.score===false) continue;if(!at.pass){if(!lastFailAt) lastFailAt=at.ts||0;lastFails++;}else{break;}}
+    if(!lastFailAt){for(let i=arr.length-1;i>=0;i--){const at=arr[i];if(at.pass===false){lastFailAt=at.ts||0;break;}}}
+    if(!seen[r.id] && arr.length===0){counts.untested++;return;}
+    if(arr.length===0){counts.new++;counts.total++;return;}
+    const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
+    const bucket = FC_UTILS.getBucketFromAccuracy({accPct:acc,attempts:arr.length,lastFails,lastFailAt,isSeen:!!seen[r.id],isAttempted:arr.length>0});
+    if(bucket===FC_UTILS.BUCKETS.STRUGGLING) counts.struggling++;
+    else if(bucket===FC_UTILS.BUCKETS.MASTERED) counts.mastered++;
+    else counts.review++;
+    counts.total++;
+  });
+  return counts;
+}
+
 function getDailyNewAllowance(unseenCount, newTodayUsed, strugglingCount){
   const base = SETTINGS.newPerDay;
   const factor = Math.max(0, Math.min(1, (STRUGGLE_CAP - strugglingCount) / STRUGGLE_CAP));
@@ -2271,8 +2295,12 @@ async function renderPhraseDashboard(){
 
       <aside class="sidebar">
         <div class="panel-white">
-          <div class="panel-title">Daily target</div>
-          <div class="ring" id="dailyRing"><span id="ringTxt">0%</span></div>
+          <div class="panel-title">Deck status</div>
+          <div class="donut-chart">
+            <canvas id="deckStatusChart" role="img"></canvas>
+            <div class="donut-center" id="deckStatusTotal">0</div>
+          </div>
+          <div class="donut-legend" id="deckStatusLegend"></div>
           <div class="list">
             <div><span class="k">Today</span> · <span class="v" id="dailyLabel">0/0</span></div>
             <div><span class="k">Streak</span> · <span class="v" id="streakNum">–</span></div>
@@ -2310,13 +2338,32 @@ async function renderPhraseDashboard(){
   }
   wrap.querySelector('#day-count').textContent = getDayNumber();
 
-  // daily ring
-  const pct = newTodayAllowed ? Math.round((used/newTodayAllowed)*100) : 0;
-  wrap.querySelector('#dailyRing').style.setProperty('--pct', pct + '%');
-  wrap.querySelector('#ringTxt').textContent = pct + '%';
+  // deck status donut
   wrap.querySelector('#dailyLabel').textContent = `${used}/${newTodayAllowed}`;
   wrap.querySelector('#wordsLearned').textContent = learned;
   wrap.querySelector('#deckProg').textContent = `${deckPct}%`;
+  const buckets = await getPhraseBuckets(deckId);
+  const total = buckets.total;
+  wrap.querySelector('#deckStatusTotal').textContent = total;
+  const canvas = wrap.querySelector('#deckStatusChart');
+  const legendEl = wrap.querySelector('#deckStatusLegend');
+  if(typeof Chart !== 'undefined'){
+    if(total === 0){
+      new Chart(canvas.getContext('2d'),{type:'doughnut',data:{datasets:[{data:[1],backgroundColor:['#E0E0E0'],borderWidth:0}]},options:{cutout:'64%',plugins:{legend:{display:false},tooltip:{enabled:false}}}});
+      legendEl.textContent = 'No active phrases yet';
+      legendEl.classList.add('muted');
+      canvas.setAttribute('aria-label','No active phrases yet');
+    }else{
+      const labels=['Mastered','Needs review','Struggling','New'];
+      const data=[buckets.mastered,buckets.review,buckets.struggling,buckets.new];
+      const colors=['#0B8457','#FFB200','#D7263D','#1E88E5'];
+      if(buckets.untested>0){labels.push('Untested');data.push(buckets.untested);colors.push('#9E9E9E');}
+      new Chart(canvas.getContext('2d'),{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0}]},options:{cutout:'64%',plugins:{legend:{display:false},tooltip:{enabled:false}},responsive:true,maintainAspectRatio:false}});
+      legendEl.innerHTML = labels.map((l,i)=>`<span class="item"><span class="dot" style="background:${colors[i]}"></span>${l} ${data[i]}</span>`).join('');
+      legendEl.classList.remove('muted');
+      canvas.setAttribute('aria-label', labels.map((l,i)=>`${l} ${data[i]}`).join(', '));
+    }
+  }
 
   // progress bar (use deck progress)
   wrap.querySelector('#xpBar').style.setProperty('--w', deckPct + '%');
