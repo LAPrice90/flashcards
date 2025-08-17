@@ -355,6 +355,14 @@ body { background: #ffffff !important; color: #0f1117 !important; }
   display:grid; place-items:center; margin: 6px auto 10px; font-weight:800;
 }
 
+.donut-chart{ position:relative; width:100%; max-width:420px; margin:6px auto 10px; }
+.donut-chart canvas{ width:100% !important; height:auto !important; }
+.donut-center{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; font-weight:800; font-size:24px; }
+.donut-legend{ display:flex; flex-wrap:wrap; justify-content:center; gap:8px; font-size:13px; margin-top:6px; }
+.donut-legend.muted{ color:var(--muted); }
+.donut-legend .item{ display:flex; align-items:center; gap:4px; }
+.donut-legend .dot{ width:10px; height:10px; border-radius:50%; }
+
 .list{ display:grid; gap:6px; font-size:14px; }
 .list .k{ color: var(--muted); }
 .list .v{ font-weight:700; }
