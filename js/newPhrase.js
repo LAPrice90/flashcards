@@ -295,10 +295,24 @@ let idx=0;        // index in queue
 let step=STEPS.WELSH;
 let allMastered=true;
 let tracker=null; // behaviour tracker instance
+let newRemainingToday=0;
 
 function routeName(){
   const raw=location.hash.startsWith('#/')?location.hash.slice(2):'home';
   return (raw.split('?')[0]||'home');
+}
+
+function updateAllowancePill(){
+  const pill=document.getElementById('np-allowance');
+  const wrap=document.getElementById('np-day-wrap');
+  if(!pill || !wrap) return;
+  if(newRemainingToday>0){
+    pill.textContent=`Today\u2019s new: ${newRemainingToday}`;
+    pill.style.display='inline-block';
+  }else{
+    pill.style.display='none';
+    wrap.textContent='Come back tomorrow';
+  }
 }
 
 /* ---------- Render host ---------- */
@@ -306,6 +320,7 @@ async function renderNewPhrase(){
   const host=document.createElement('div');
   host.innerHTML=`<h1 class="h1">New Words</h1>
     <div class="muted" id="np-day-wrap">Day <span id="np-day">1</span></div>
+    <div class="status-pill gray" id="np-allowance" style="display:none; margin-top:4px;"></div>
     <section class="card card--center"><div id="np-root" class="flashcard"></div></section>`;
   viewEl=host.querySelector('#np-root');
   host.querySelector('#np-day').textContent=getDayNumber?.() || '—';
@@ -368,12 +383,30 @@ async function renderNewPhrase(){
     unseenCards.sort(sortByCourseOrder);
 
     // Daily allowance
+    const activeRows = deckRows.filter(r => seenIds.has(r.id) || (attempts[r.id] || []).length);
+    const enriched = activeRows.map(r=>{
+      const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
+      const status = categoryFromPct(acc);
+      return {status};
+    });
+    const strugglingCount = enriched.filter(x=>x.status==='Struggling').length;
+
     const prev = loadNewDaily(dk);
     const dayKey = todayKey();
     const usedToday = prev.date === dayKey ? (prev.used || 0) : 0;
-    const daily = getDailyNewAllowance(unseenCards.length, usedToday, 0);
+    const daily = getDailyNewAllowance(unseenCards.length, usedToday, strugglingCount);
     saveNewDaily(dk, { date: dayKey, ...daily });
-    queue = unseenCards.slice(0, Math.max(0, (daily.allowed || 0) - (daily.used || 0)));
+    newRemainingToday = Math.max(0, (daily.allowed || 0) - (daily.used || 0));
+    queue = unseenCards.slice(0, newRemainingToday);
+    const pill=host.querySelector('#np-allowance');
+    const wrap=host.querySelector('#np-day-wrap');
+    if(newRemainingToday>0){
+      pill.textContent=`Today\u2019s new: ${newRemainingToday}`;
+      pill.style.display='inline-block';
+    }else{
+      pill.style.display='none';
+      wrap.textContent='Come back tomorrow';
+    }
 
     idx = 0; step = STEPS.WELSH;
     if (queue.length) render(); else renderEmpty();
@@ -534,6 +567,8 @@ function render(){
         markSeenNow(c.id);
         bumpDailyUsed();
         tickDay && tickDay();
+        newRemainingToday = Math.max(0, newRemainingToday - 1);
+        updateAllowancePill();
         fireProgressEvent({ type: 'introduced', id: c.id });
 
         // cloud sync if configured
