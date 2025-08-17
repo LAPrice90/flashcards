@@ -20,6 +20,7 @@ const SCORE_WINDOW = 10;
 const LS_TEST_SESSION = 'tm_session';
 const SCORE_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
 const STRUGGLE_CAP = 10;
+const SESSION_MAX = 15;
 
 function deckKeyFromState() {
   // Prefer the JSON filename stem already used by the fetch; fall back to STATE.activeDeckId.
@@ -682,6 +683,8 @@ async function renderPhraseDashboard(){
   });
   const strugglingCount = enriched.filter(x=>x.status==='Struggling').length;
   const reviewDue       = await fcGetTestQueueCount();
+  const quizToday       = Math.min(reviewDue, SESSION_MAX);
+  const quizQueued      = Math.max(reviewDue - SESSION_MAX, 0);
 
   // new phrases allowance
   const daily = loadNewDaily(deckId);
@@ -700,7 +703,7 @@ async function renderPhraseDashboard(){
     bannerText = 'New phrases paused';
   }
 
-  const quizCount = reviewDue;
+  const quizCount = quizToday;
   const learned   = Object.keys(seen).length;
   const deckPct   = rows.length ? Math.round((learned/rows.length)*100) : 0;
 
@@ -736,7 +739,7 @@ async function renderPhraseDashboard(){
               <div class="badge" id="b-quiz">0</div>
             </div>
             <div class="label">Quiz</div>
-            <div class="sub">Multiple choice / type</div>
+            <div class="sub">Multiple choice / type <span class="queued-pill hidden" id="quizQueued"></span></div>
           </a>
 
           <a class="skill" id="sk-all">
@@ -775,6 +778,11 @@ async function renderPhraseDashboard(){
   wrap.querySelector('#b-new').textContent    = newToday;
   wrap.querySelector('#b-review').textContent = reviewDue;
   wrap.querySelector('#b-quiz').textContent   = quizCount;
+  if (quizQueued > 0) {
+    const qp = wrap.querySelector('#quizQueued');
+    qp.textContent = `+${quizQueued} queued`;
+    qp.classList.remove('hidden');
+  }
 
   // daily ring
   const pct = newTodayAllowed ? Math.round((used/newTodayAllowed)*100) : 0;
