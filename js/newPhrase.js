@@ -318,10 +318,14 @@ function updateAllowancePill(){
 /* ---------- Render host ---------- */
 async function renderNewPhrase(){
   const host=document.createElement('div');
-  host.innerHTML=`<h1 class="h1">New Words</h1>
-    <div class="muted" id="np-day-wrap">Day <span id="np-day">1</span></div>
-    <div class="status-pill gray" id="np-allowance" style="display:none; margin-top:4px;"></div>
-    <section class="card card--center"><div id="np-root" class="flashcard"></div></section>`;
+  host.innerHTML=`<div class="muted" id="np-day-wrap">Day <span id="np-day">1</span></div>
+    <section class="learn-card is-phrases">
+      <div class="learn-card-header">
+        <div class="lc-left"><img src="media/icons/New%20Phrases.png" alt="" class="lc-icon"><h2 class="lc-title">New Phrases</h2></div>
+        <div class="lc-right"><span class="pill default" id="np-allowance" style="display:none;"></span></div>
+      </div>
+      <div class="learn-card-content card--center"><div id="np-root" class="flashcard"></div></div>
+    </section>`;
   viewEl=host.querySelector('#np-root');
   host.querySelector('#np-day').textContent=getDayNumber?.() || '—';
 

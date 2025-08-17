@@ -104,8 +104,7 @@ async function renderReview(query) {
 
   if (!cards.length) {
     const err = document.createElement('div');
-    err.innerHTML = `<h1 class="h1">Review <span class="muted">(${activeDeck.name})</span></h1>` +
-      `<section class="card card--center">No introduced cards. Use New Phrases first.</section>`;
+    err.innerHTML = `<section class="learn-card is-flashcards"><div class="learn-card-header"><div class="lc-left"><img src="media/icons/Flashcards.png" alt="" class="lc-icon"><h2 class="lc-title">Flashcards</h2></div></div><div class="learn-card-content card--center">No introduced cards. Use New Phrases first.</div></section>`;
     return err;
   }
 
@@ -121,17 +120,21 @@ async function renderReview(query) {
 
   const wrap = document.createElement('div');
   wrap.innerHTML = `
-    <h1 class="h1">Review <span class="muted">(${activeDeck.name})</span></h1>
-    <section class="card card--center">
-      <div class="flashcard" id="flashcard" data-view="${STATE.viewMode}">
-        <div class="fc-topbar">
-          <div class="fc-viewtoggle">
-            <label class="toggle">
-              <input type="checkbox" id="viewToggle" ${STATE.viewMode === 'detail' ? 'checked' : ''}>
-              <span class="tlabel"><span>Flashcard</span><span>Detailed</span></span>
-            </label>
+    <section class="learn-card is-flashcards">
+      <div class="learn-card-header">
+        <div class="lc-left"><img src="media/icons/Flashcards.png" alt="" class="lc-icon"><h2 class="lc-title">Flashcards</h2></div>
+        <div class="lc-right"></div>
+      </div>
+      <div class="learn-card-content card--center">
+        <div class="flashcard" id="flashcard" data-view="${STATE.viewMode}">
+          <div class="fc-topbar">
+            <div class="fc-viewtoggle">
+              <label class="toggle">
+                <input type="checkbox" id="viewToggle" ${STATE.viewMode === 'detail' ? 'checked' : ''}>
+                <span class="tlabel"><span>Flashcard</span><span>Detailed</span></span>
+              </label>
+            </div>
           </div>
-        </div>
 
         <div class="flashcard-image" id="fcImg"></div>
 
@@ -154,6 +157,7 @@ async function renderReview(query) {
         </div>
 
         <div class="flashcard-progress muted" id="fcProg"></div>
+        </div>
       </div>
     </section>
   `;

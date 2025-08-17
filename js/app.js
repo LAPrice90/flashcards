@@ -460,8 +460,13 @@ function getDailyNewAllowance(unseenCount, newTodayUsed, strugglingCount){
 function renderTestShell(){
   const wrap=document.createElement('div');
   wrap.innerHTML = `
-    <h1 class="h1">Test Mode</h1>
-    <section class="card card--center"><div id="test-container"></div></section>`;
+    <section class="learn-card is-quiz">
+      <div class="learn-card-header">
+        <div class="lc-left"><img src="media/icons/Quiz.png" alt="" class="lc-icon"><h2 class="lc-title">Quiz</h2></div>
+        <div class="lc-right"></div>
+      </div>
+      <div class="learn-card-content card--center"><div id="test-container"></div></div>
+    </section>`;
   return wrap;
 }
 function renderSettings(){

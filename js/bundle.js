@@ -206,10 +206,14 @@ function fireProgressEvent(payload){
 
   async function renderNewPhrase(){
     const host=document.createElement('div');
-    host.innerHTML=`<h1 class="h1">New Words</h1>
-      <div class="muted" id="np-day-wrap">Day <span id="np-day">1</span></div>
-      <div class="status-pill gray" id="np-allowance" style="display:none; margin-top:4px;"></div>
-      <section class="card card--center"><div id="np-root" class="flashcard"></div></section>`;
+    host.innerHTML=`<div class="muted" id="np-day-wrap">Day <span id="np-day">1</span></div>
+      <section class="learn-card is-phrases">
+        <div class="learn-card-header">
+          <div class="lc-left"><img src="media/icons/New%20Phrases.png" alt="" class="lc-icon"><h2 class="lc-title">New Phrases</h2></div>
+          <div class="lc-right"><span class="pill default" id="np-allowance" style="display:none;"></span></div>
+        </div>
+        <div class="learn-card-content card--center"><div id="np-root" class="flashcard"></div></div>
+      </section>`;
     viewEl=host.querySelector('#np-root');
 
     const deckId = dk;
@@ -597,8 +601,7 @@ async function renderReview(query) {
 
   if (!cards.length) {
     const err = document.createElement('div');
-    err.innerHTML = `<h1 class="h1">Review <span class="muted">(${activeDeck.name})</span></h1>` +
-      `<section class="card card--center">No introduced cards. Use New Phrases first.</section>`;
+    err.innerHTML = `<section class="learn-card is-flashcards"><div class="learn-card-header"><div class="lc-left"><img src="media/icons/Flashcards.png" alt="" class="lc-icon"><h2 class="lc-title">Flashcards</h2></div></div><div class="learn-card-content card--center">No introduced cards. Use New Phrases first.</div></section>`;
     return err;
   }
 
@@ -614,17 +617,21 @@ async function renderReview(query) {
 
   const wrap = document.createElement('div');
   wrap.innerHTML = `
-    <h1 class="h1">Review <span class="muted">(${activeDeck.name})</span></h1>
-    <section class="card card--center">
-      <div class="flashcard" id="flashcard" data-view="${STATE.viewMode}">
-        <div class="fc-topbar">
-          <div class="fc-viewtoggle">
-            <label class="toggle">
-              <input type="checkbox" id="viewToggle" ${STATE.viewMode === 'detail' ? 'checked' : ''}>
-              <span class="tlabel"><span>Flashcard</span><span>Detailed</span></span>
-            </label>
+    <section class="learn-card is-flashcards">
+      <div class="learn-card-header">
+        <div class="lc-left"><img src="media/icons/Flashcards.png" alt="" class="lc-icon"><h2 class="lc-title">Flashcards</h2></div>
+        <div class="lc-right"></div>
+      </div>
+      <div class="learn-card-content card--center">
+        <div class="flashcard" id="flashcard" data-view="${STATE.viewMode}">
+          <div class="fc-topbar">
+            <div class="fc-viewtoggle">
+              <label class="toggle">
+                <input type="checkbox" id="viewToggle" ${STATE.viewMode === 'detail' ? 'checked' : ''}>
+                <span class="tlabel"><span>Flashcard</span><span>Detailed</span></span>
+              </label>
+            </div>
           </div>
-        </div>
 
         <div class="flashcard-image" id="fcImg"></div>
 
@@ -647,6 +654,7 @@ async function renderReview(query) {
         </div>
 
         <div class="flashcard-progress muted" id="fcProg"></div>
+        </div>
       </div>
     </section>
   `;
@@ -1857,8 +1865,13 @@ function getDailyNewAllowance(unseenCount, newTodayUsed, strugglingCount){
 function renderTestShell(){
   const wrap=document.createElement('div');
   wrap.innerHTML = `
-    <h1 class="h1">Test Mode</h1>
-    <section class="card card--center"><div id="test-container"></div></section>`;
+    <section class="learn-card is-quiz">
+      <div class="learn-card-header">
+        <div class="lc-left"><img src="media/icons/Quiz.png" alt="" class="lc-icon"><h2 class="lc-title">Quiz</h2></div>
+        <div class="lc-right"></div>
+      </div>
+      <div class="learn-card-content card--center"><div id="test-container"></div></div>
+    </section>`;
   return wrap;
 }
 function renderSettings(){
