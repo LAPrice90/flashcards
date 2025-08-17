@@ -139,6 +139,8 @@ function fireProgressEvent(payload){
     entry.seenCount += 1;
     entry.lastSeen = today;
     if(!entry.introducedAt) entry.introducedAt = new Date().toISOString();
+    if(typeof entry.interval !== 'number') entry.interval = 1;
+    entry.interval = FC_UTILS.clampInterval(entry.interval);
     prog.seen[cardId] = entry;
     localStorage.setItem(progressKey, JSON.stringify(prog));
     if(!wasSeen){ FC_UTILS.consumeNewAllowance(); }
@@ -1745,8 +1747,18 @@ function todayKey() {
 function loadProgress(deckId){
   const dk = deckId || deckKeyFromState();
   const progressKey = LS_PROGRESS_PREFIX + dk;
-  try{ return JSON.parse(localStorage.getItem(progressKey) || '{}'); }
-  catch { return {}; }
+  let obj;
+  try{ obj = JSON.parse(localStorage.getItem(progressKey) || '{}'); }
+  catch{ obj = {}; }
+  const seen = obj.seen || {};
+  Object.keys(seen).forEach(id => {
+    const entry = seen[id] || {};
+    const n = typeof entry.interval === 'number' ? entry.interval : 1;
+    entry.interval = FC_UTILS.clampInterval(n);
+    seen[id] = entry;
+  });
+  obj.seen = seen;
+  return obj;
 }
 function saveProgress(deckId,obj){
   const dk = deckId || deckKeyFromState();

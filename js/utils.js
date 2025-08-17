@@ -80,6 +80,13 @@
     return { remaining: state.remaining };
   }
 
+  function clampInterval(n){
+    n = typeof n === 'number' ? Math.round(n) : 1;
+    if(n < 1) n = 1;
+    if(n > 365) n = 365;
+    return n;
+  }
+
   function deckKeyFromState(){
     const map = {
       'Welsh – A1 Phrases': 'welsh_phrases_A1',
@@ -114,7 +121,8 @@
     getLocalISODate,
     getDailyNewAllowance,
     consumeNewAllowance,
-    peekAllowance
+    peekAllowance,
+    clampInterval
   };
 
   global.logReview = logReview;
