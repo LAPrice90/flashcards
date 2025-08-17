@@ -489,6 +489,13 @@ body { background: #ffffff !important; color: #0f1117 !important; }
 /* Progress */
 .flashcard-progress { text-align: center; font-size: 12px; color: var(--muted); }
 
+.fc-stage { position: relative; will-change: transform; transition: transform 160ms ease, opacity 160ms ease; touch-action: pan-y; display:flex; flex-direction:column; gap:14px; }
+.fc-stage.swiping { transition: none; }
+.fc-edge-hint::before, .fc-edge-hint::after { content:""; position:absolute; top:0; bottom:0; width:12px; pointer-events:none; }
+.fc-edge-hint::before { left:0; background: linear-gradient(90deg, rgba(0,0,0,.03), transparent); }
+.fc-edge-hint::after  { right:0; background: linear-gradient(270deg, rgba(0,0,0,.03), transparent); }
+@media (min-width:1024px){ .fc-edge-hint::before, .fc-edge-hint::after{ display:none; } }
+
   /* Details container handles visibility */
 
 /* Mobile tweaks */
