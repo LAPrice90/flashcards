@@ -1925,9 +1925,36 @@ async function renderLearned(){
   const activeRows = rows.filter(r=>seen[r.id] || (attempts[r.id] && attempts[r.id].length));
 
   const data = activeRows.map(r=>{
+    const arr = attempts[r.id] || [];
     const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
-    const status = acc >= 80 ? 'Mastered' : 'Needs review';
-    const tries = (attempts[r.id]||[]).length;
+    let lastFailAt = 0;
+    let lastFails = 0;
+    for(let i=arr.length-1;i>=0;i--){
+      const a=arr[i];
+      if(a.score === false) continue;
+      if(!a.pass){
+        if(!lastFailAt) lastFailAt = a.ts || 0;
+        lastFails++;
+      } else {
+        break;
+      }
+    }
+    if(!lastFailAt){
+      for(let i=arr.length-1;i>=0;i--){
+        const a=arr[i];
+        if(a.pass === false){ lastFailAt = a.ts || 0; break; }
+      }
+    }
+    const bucket = FC_UTILS.getBucketFromAccuracy({
+      accPct: acc,
+      attempts: arr.length,
+      lastFails,
+      lastFailAt,
+      isSeen: !!seen[r.id],
+      isAttempted: arr.length > 0
+    });
+    const status = FC_UTILS.BUCKET_LABELS[bucket];
+    const tries = arr.length;
     return { ...r, acc, status, tries };
   });
 
