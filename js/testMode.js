@@ -14,6 +14,8 @@
   const SCORE_COOLDOWN_MS = 60 * 60 * 1000; // do not count another "pass" within 1h
   const SCORE_WINDOW      = 10;       // last-N window for confidence/accuracy
 
+  const FC_SRS = window.FC_SRS || {};
+
   // Behaviour thresholds
   const THINK_MIN_S     = 6;
   const THINK_MAX_S     = 45;     // nudge at this time
@@ -371,6 +373,9 @@
       forceNoScore: practiceMode
     });
     logReview(c, pass ? 'pass' : 'fail');
+    if (FC_SRS.scheduleNextReview) {
+      FC_SRS.scheduleNextReview(c, pass ? 'pass' : 'fail', { now: new Date(), grace: SETTINGS.graceMode });
+    }
 
     fireProgressEvent({ type:'attempt', id:c.id, pass });
 
@@ -414,6 +419,9 @@
         const ok = equalsLoose(val, card.front);
         logAttempt(card.id, ok, { behaviour: localTracker.classify().kind, forceNoScore: true });
         logReview(card, ok ? 'pass' : 'fail');
+        if (FC_SRS.scheduleNextReview) {
+          FC_SRS.scheduleNextReview(card, ok ? 'pass' : 'fail', { now: new Date(), grace: SETTINGS.graceMode });
+        }
         fireProgressEvent({ type:'attempt', id: card.id, pass: ok });
         if (ok){
           if (step===1) copyStep(2);
@@ -448,6 +456,9 @@
         const ok = equalsLoose(val, card.front);
         const counted = logAttempt(card.id, ok, { behaviour: localTracker.classify().kind, forceNoScore: practiceMode });
         logReview(card, ok ? 'pass' : 'fail');
+        if (FC_SRS.scheduleNextReview) {
+          FC_SRS.scheduleNextReview(card, ok ? 'pass' : 'fail', { now: new Date(), grace: SETTINGS.graceMode });
+        }
         fireProgressEvent({ type:'attempt', id: card.id, pass: ok });
         if (ok){
           if (counted && !practiceMode) tickDay && tickDay();
