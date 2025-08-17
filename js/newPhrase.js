@@ -214,6 +214,8 @@ function markSeenNow(cardId){
     entry.interval = card.interval;
     entry.dueDate = card.dueDate;
     FC_UTILS.consumeNewAllowance();
+  } else {
+    FC_SRS.ensureInterval && FC_SRS.ensureInterval(entry);
   }
   prog.seen[cardId] = entry;
   localStorage.setItem(progressKey, JSON.stringify(prog));

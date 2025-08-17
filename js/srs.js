@@ -13,6 +13,21 @@
 
 import { persistCard } from './storage.js';
 
+/** Clamp an interval in days to the supported range. */
+export function clampInterval(days) {
+  return Math.max(1, Math.min(365, Math.round(days || 1)));
+}
+
+/** Ensure a card has a valid interval property. */
+export function ensureInterval(card) {
+  if (typeof card.interval !== 'number' || !isFinite(card.interval)) {
+    card.interval = 1;
+  } else {
+    card.interval = clampInterval(card.interval);
+  }
+  return card;
+}
+
 /** Clamp a numeric value between min and max. */
 function clamp(val, min, max) {
   return Math.min(Math.max(val, min), max);
@@ -47,7 +62,8 @@ export function scheduleNextReview(card, result, { now = new Date(), grace = fal
   if (!card) throw new Error('Card required');
   const nowDate = new Date(now);
 
-  let intervalDays = Math.max(1, Math.round(card.interval || 1));
+  ensureInterval(card);
+  let intervalDays = clampInterval(card.interval);
   let due = addDays(nowDate, intervalDays);
   card.ease = typeof card.ease === 'number' ? card.ease : 2.5;
 
@@ -76,7 +92,7 @@ export function scheduleNextReview(card, result, { now = new Date(), grace = fal
   }
 
   card.ease = clamp(card.ease, 1.3, 3.0);
-  intervalDays = clamp(intervalDays, 1, 365);
+  intervalDays = clampInterval(intervalDays);
 
   let dueDate;
   if (grace && card.dueDate) {
@@ -121,7 +137,7 @@ export function nextIntervalsForNew() {
 export function applyIntroPath(card, stepIndex, { now = new Date() } = {}) {
   const steps = nextIntervalsForNew();
   const stepDays = steps[stepIndex] ?? 0;
-  const storeInterval = Math.max(1, stepDays);
+  const storeInterval = clampInterval(stepDays);
   const due = addDays(new Date(now), stepDays);
   card.interval = storeInterval;
   card.dueDate = due.toISOString();
@@ -131,9 +147,11 @@ export function applyIntroPath(card, stepIndex, { now = new Date() } = {}) {
 export default {
   scheduleNextReview,
   nextIntervalsForNew,
-  applyIntroPath
+  applyIntroPath,
+  clampInterval,
+  ensureInterval
 };
 
 if (typeof window !== 'undefined') {
-  window.FC_SRS = { scheduleNextReview, nextIntervalsForNew, applyIntroPath, persistCard };
+  window.FC_SRS = { scheduleNextReview, nextIntervalsForNew, applyIntroPath, persistCard, clampInterval, ensureInterval };
 }
