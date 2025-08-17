@@ -331,7 +331,7 @@
 
     container.innerHTML = `
       <div class="flashcard">
-        <div class="translation">${escapeHTML(c.back)}</div>
+        <div class="translation tm-question">${escapeHTML(c.back)}</div>
         <div class="tm-inputblock">
           <label for="tm-answer" class="tm-label">Type the Welsh</label>
           <input id="tm-answer" class="tm-field" type="text" placeholder="Type the Welsh…" autocomplete="off" autocapitalize="off" spellcheck="false">
@@ -443,7 +443,7 @@
     function blindStep(attempt){
       container.innerHTML = `
         <div class="flashcard">
-          <div class="translation">${escapeHTML(card.back)}</div>
+          <div class="translation tm-question">${escapeHTML(card.back)}</div>
           <div class="tm-inputblock" style="margin-top:8px;">
             <label class="tm-label">Type the Welsh</label>
             <input id="tm-drill" class="tm-field" type="text" placeholder="Type the Welsh…" autocomplete="off" autocapitalize="off" spellcheck="false">

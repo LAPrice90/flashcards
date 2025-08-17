@@ -140,7 +140,7 @@ async function renderReview(query) {
 
         <div class="fc-phrase">
           <div class="term" id="fcTerm" title="Tap to flip in Flashcard mode"></div>
-          <button class="btn audio-btn" id="audioBtn" title="Play (alternates fast/slow)">🔊 Play</button>
+          <button class="btn audio-btn play-btn" id="audioBtn" title="Play (alternates fast/slow)">🔊 Play</button>
           <div class="phonetic" id="fcPhon"></div>
         </div>
 
