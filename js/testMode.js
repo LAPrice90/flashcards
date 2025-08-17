@@ -230,10 +230,10 @@
       const arr = attemptsMap[c.id] || [];
       const acc = lastNAccuracy(c.id, SCORE_WINDOW, attemptsMap);
       const meta = deriveAttemptMeta(arr);
-      const bucket = FC_UTILS.getBucketFromAccuracy({
-        accPct: acc,
+      const bucket = FC_UTILS.getBucket({
+        accuracyPct: acc,
         attempts: meta.attempts,
-        introducedAt: seenMap[c.id] && seenMap[c.id].firstSeen
+        introducedAt: seenMap[c.id] && (seenMap[c.id].introducedAt || seenMap[c.id].firstSeen)
       });
       c.conf = acc;
       c.isStruggling = bucket === FC_UTILS.BUCKETS.STRUGGLING;

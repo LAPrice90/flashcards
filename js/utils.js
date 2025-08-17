@@ -3,7 +3,6 @@
     NEW: 'NEW',
     STRUGGLING: 'STRUGGLING',
     NEEDS_REVIEW: 'NEEDS_REVIEW',
-    CONFIDENT: 'CONFIDENT',
     MASTERED: 'MASTERED'
   };
 
@@ -11,7 +10,6 @@
     NEW: 'New',
     STRUGGLING: 'Struggling',
     NEEDS_REVIEW: 'Needs review',
-    CONFIDENT: 'Confident',
     MASTERED: 'Mastered'
   };
 
@@ -21,18 +19,17 @@
     return d.toISOString().slice(0,10);
   }
 
-  function getBucketFromAccuracy(opts){
+  function getBucket(card){
     const {
       introducedAt,
       attempts = 0,
-      accPct = 0
-    } = opts || {};
+      accuracyPct = 0
+    } = card || {};
 
     if(!introducedAt) return null;
     if(attempts === 0) return BUCKETS.NEW;
-    if(accPct < 50) return BUCKETS.STRUGGLING;
-    if(accPct < 80) return BUCKETS.NEEDS_REVIEW;
-    if(accPct < 90) return BUCKETS.CONFIDENT;
+    if(accuracyPct < 50) return BUCKETS.STRUGGLING;
+    if(accuracyPct < 80) return BUCKETS.NEEDS_REVIEW;
     return BUCKETS.MASTERED;
   }
 
@@ -86,7 +83,7 @@
   global.FC_UTILS = {
     BUCKETS,
     BUCKET_LABELS,
-    getBucketFromAccuracy,
+    getBucket,
     getLocalISODate,
     getDailyNewAllowance,
     consumeNewAllowance,

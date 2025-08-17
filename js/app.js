@@ -20,7 +20,7 @@ const LS_TEST_SESSION = 'tm_session';
 const SCORE_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
 const STRUGGLE_CAP = 10;
 const SESSION_MAX = 15;
-const { getBucketFromAccuracy, BUCKETS, BUCKET_LABELS, getDailyNewAllowance, peekAllowance } = FC_UTILS;
+const { getBucket, BUCKETS, BUCKET_LABELS, getDailyNewAllowance, peekAllowance } = FC_UTILS;
 
 function hideRestrictionToast(){
   const el=document.getElementById('restrictionToast');
@@ -110,6 +110,37 @@ const dk          = deckKeyFromState();
 const progressKey = 'progress_' + dk;          // read/write
 const attemptsKey = 'tm_attempts_v1';          // global attempts
 
+// Backfill introducedAt for cards with attempts but no introduction
+function backfillIntroducedAt(){
+  let updated = 0;
+  let prog;
+  try { prog = JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}'); }
+  catch { prog = { seen:{} }; }
+  const attempts = JSON.parse(localStorage.getItem(attemptsKey) || '{}');
+  const seen = prog.seen || {};
+  Object.keys(attempts).forEach(id => {
+    const arr = attempts[id] || [];
+    if(!arr.length) return;
+    const entry = seen[id] || {};
+    if(entry.introducedAt) return;
+    entry.introducedAt = arr[0]?.ts || Date.now();
+    if(!entry.firstSeen){
+      const d = new Date(entry.introducedAt);
+      entry.firstSeen = d.toISOString().slice(0,10);
+    }
+    seen[id] = entry;
+    updated++;
+  });
+  if(updated){
+    prog.seen = seen;
+    localStorage.setItem(progressKey, JSON.stringify(prog));
+  }
+  return updated;
+}
+
+const _backfilledCount = backfillIntroducedAt();
+if(_backfilledCount) console.info(`Backfilled introducedAt for ${_backfilledCount} cards`);
+
 function fireProgressEvent(payload){
   window.dispatchEvent(new CustomEvent('fc:progress-updated', { detail: payload || {} }));
 }
@@ -156,10 +187,10 @@ async function updateStatusPills(){
     const arr = attempts[r.id] || [];
     const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
     const meta = deriveAttemptMeta(arr);
-    const bucket = getBucketFromAccuracy({
-      accPct: acc,
+    const bucket = getBucket({
+      accuracyPct: acc,
       attempts: meta.attempts,
-      introducedAt: seen[r.id] && seen[r.id].firstSeen
+      introducedAt: seen[r.id] && (seen[r.id].introducedAt || seen[r.id].firstSeen)
     });
     return {bucket};
   });
@@ -456,23 +487,29 @@ async function getPhraseBuckets(deckId){
   const attempts = loadAttemptsMap();
   const rows = await loadDeckRows(dk);
   const seen = prog.seen || {};
-  const counts = { new:0, untested:0, struggling:0, review:0, mastered:0, total:0 };
+  const counts = { new:0, struggling:0, needsReview:0, mastered:0, total:0 };
+  const debug = [];
   rows.forEach(r=>{
     const arr = attempts[r.id] || [];
     const meta = deriveAttemptMeta(arr);
-    if(!seen[r.id] && meta.attempts===0){ counts.untested++; return; }
-    if(meta.attempts===0){ counts.new++; counts.total++; return; }
     const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
-    const bucket = getBucketFromAccuracy({
-      accPct: acc,
+    const introducedAt = seen[r.id] && (seen[r.id].introducedAt || seen[r.id].firstSeen);
+    const bucket = getBucket({
+      introducedAt,
       attempts: meta.attempts,
-      introducedAt: seen[r.id] && seen[r.id].firstSeen
+      accuracyPct: acc
     });
-    if(bucket === BUCKETS.STRUGGLING) counts.struggling++;
+    if(debug.length < 10){
+      debug.push({ id:r.id, introducedAt, attempts: meta.attempts, accuracyPct: acc, bucket });
+    }
+    if(!bucket) return;
+    if(bucket === BUCKETS.NEW) counts.new++;
+    else if(bucket === BUCKETS.STRUGGLING) counts.struggling++;
+    else if(bucket === BUCKETS.NEEDS_REVIEW) counts.needsReview++;
     else if(bucket === BUCKETS.MASTERED) counts.mastered++;
-    else counts.review++;
     counts.total++;
   });
+  console.debug('[deck-status]', debug, counts);
   return counts;
 }
 
@@ -533,12 +570,12 @@ async function renderLearned(){
     const arr = attempts[r.id] || [];
     const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
     const meta = deriveAttemptMeta(arr);
-    const bucket = getBucketFromAccuracy({
-      accPct: acc,
+    const bucket = getBucket({
+      accuracyPct: acc,
       attempts: meta.attempts,
-      introducedAt: seen[r.id] && seen[r.id].firstSeen
+      introducedAt: seen[r.id] && (seen[r.id].introducedAt || seen[r.id].firstSeen)
     });
-    const status = BUCKET_LABELS[bucket];
+    const status = bucket ? BUCKET_LABELS[bucket] : '';
     const tries = meta.attempts;
     return { ...r, acc, status, tries };
   });
@@ -792,10 +829,10 @@ async function renderPhraseDashboard(){
     const arr = attempts[r.id] || [];
     const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
     const meta = deriveAttemptMeta(arr);
-    const bucket = getBucketFromAccuracy({
-      accPct: acc,
+    const bucket = getBucket({
+      accuracyPct: acc,
       attempts: meta.attempts,
-      introducedAt: seen[r.id] && seen[r.id].firstSeen
+      introducedAt: seen[r.id] && (seen[r.id].introducedAt || seen[r.id].firstSeen)
     });
     return { ...r, acc, bucket };
   });
@@ -934,13 +971,8 @@ async function renderPhraseDashboard(){
       canvas.setAttribute('aria-label','No active phrases yet');
     }else{
       const labels=['Mastered','Needs review','Struggling','New'];
-      const data=[buckets.mastered,buckets.review,buckets.struggling,buckets.new];
+      const data=[buckets.mastered,buckets.needsReview,buckets.struggling,buckets.new];
       const colors=['#0B8457','#FFB200','#D7263D','#1E88E5'];
-      if(buckets.untested>0){
-        labels.push('Untested');
-        data.push(buckets.untested);
-        colors.push('#9E9E9E');
-      }
       new Chart(canvas.getContext('2d'),{
         type:'doughnut',
         data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0}]},
