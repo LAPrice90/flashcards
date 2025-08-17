@@ -47,7 +47,8 @@ function backfillIntroducedAt(){
     if(!arr.length) return;
     const entry = seen[id] || {};
     if(entry.introducedAt) return;
-    entry.introducedAt = (arr[0] && arr[0].ts) || Date.now();
+    const t = arr[0] && arr[0].ts;
+    entry.introducedAt = t ? new Date(t).toISOString() : new Date().toISOString();
     if(!entry.firstSeen){
       const d=new Date(entry.introducedAt);
       entry.firstSeen=d.toISOString().slice(0,10);
@@ -137,7 +138,7 @@ function fireProgressEvent(payload){
     const entry = prog.seen[cardId] || { firstSeen: today, seenCount: 0 };
     entry.seenCount += 1;
     entry.lastSeen = today;
-    if(!entry.introducedAt) entry.introducedAt = Date.now();
+    if(!entry.introducedAt) entry.introducedAt = new Date().toISOString();
     prog.seen[cardId] = entry;
     localStorage.setItem(progressKey, JSON.stringify(prog));
     if(!wasSeen){ FC_UTILS.consumeNewAllowance(); }
