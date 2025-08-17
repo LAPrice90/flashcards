@@ -123,32 +123,26 @@ async function renderReview(query) {
     <section class="learn-card is-flashcards">
       <div class="learn-card-header">
         <div class="lc-left"><img src="media/icons/Flashcards.png" alt="" class="lc-icon"><h2 class="lc-title">Flashcards</h2></div>
-        <div class="lc-right"></div>
+        <div class="lc-right"><button class="fc-expand-btn" id="detailToggle" aria-expanded="false" aria-controls="fcDetails" aria-label="Show details">+</button></div>
       </div>
       <div class="learn-card-content card--center">
-        <div class="flashcard" id="flashcard" data-view="${STATE.viewMode}">
-          <div class="fc-topbar">
-            <div class="fc-viewtoggle">
-              <label class="toggle">
-                <input type="checkbox" id="viewToggle" ${STATE.viewMode === 'detail' ? 'checked' : ''}>
-                <span class="tlabel"><span>Flashcard</span><span>Detailed</span></span>
-              </label>
-            </div>
-          </div>
+        <div class="flashcard" id="flashcard">
 
         <div class="flashcard-image" id="fcImg"></div>
 
         <div class="fc-phrase">
-          <div class="term" id="fcTerm" title="Tap to flip in Flashcard mode"></div>
+          <div class="term" id="fcTerm" title="Tap to flip"></div>
           <button class="btn audio-btn play-btn" id="audioBtn" title="Play (alternates fast/slow)">🔊 Play</button>
-          <div class="phonetic" id="fcPhon"></div>
         </div>
 
-        <div class="translation" id="fcTrans"></div>
-        <div class="breakdown" id="fcBreak"></div>
-        <div class="usage" id="fcUsage"></div>
-        <div class="example" id="fcExample"></div>
-        <div class="patterns" id="fcPatterns"></div>
+        <div class="fc-details" id="fcDetails" hidden tabindex="-1">
+          <div class="phonetic" id="fcPhon"></div>
+          <div class="translation" id="fcTrans"></div>
+          <div class="breakdown" id="fcBreak"></div>
+          <div class="usage" id="fcUsage"></div>
+          <div class="example" id="fcExample"></div>
+          <div class="patterns" id="fcPatterns"></div>
+        </div>
 
         <div class="flashcard-actions">
           <button class="btn nav-btn" id="prevBtn">Previous</button>
@@ -162,28 +156,57 @@ async function renderReview(query) {
     </section>
   `;
 
-  const root     = wrap.querySelector('#flashcard');
-  const imgEl    = wrap.querySelector('#fcImg');
-  const termEl   = wrap.querySelector('#fcTerm');
-  const phonEl   = wrap.querySelector('#fcPhon');
-  const transEl  = wrap.querySelector('#fcTrans');
-  const brkEl    = wrap.querySelector('#fcBreak');
-  const useEl    = wrap.querySelector('#fcUsage');
-  const exEl     = wrap.querySelector('#fcExample');
-  const patEl    = wrap.querySelector('#fcPatterns');
-  const prevBtn  = wrap.querySelector('#prevBtn');
-  const nextBtn  = wrap.querySelector('#nextBtn');
-  const audioBtn = wrap.querySelector('#audioBtn');
-  const progEl   = wrap.querySelector('#fcProg');
-  const viewTgl  = wrap.querySelector('#viewToggle');
+  const root       = wrap.querySelector('#flashcard');
+  const imgEl      = wrap.querySelector('#fcImg');
+  const termEl     = wrap.querySelector('#fcTerm');
+  const phonEl     = wrap.querySelector('#fcPhon');
+  const transEl    = wrap.querySelector('#fcTrans');
+  const brkEl      = wrap.querySelector('#fcBreak');
+  const useEl      = wrap.querySelector('#fcUsage');
+  const exEl       = wrap.querySelector('#fcExample');
+  const patEl      = wrap.querySelector('#fcPatterns');
+  const detailsEl  = wrap.querySelector('#fcDetails');
+  const expandBtn  = wrap.querySelector('#detailToggle');
+  const prevBtn    = wrap.querySelector('#prevBtn');
+  const nextBtn    = wrap.querySelector('#nextBtn');
+  const audioBtn   = wrap.querySelector('#audioBtn');
+  const progEl     = wrap.querySelector('#fcProg');
 
-  // toggle view
-  viewTgl.addEventListener('change', () => {
-    const mode = viewTgl.checked ? 'detail' : 'flash';
-    setViewMode(mode);
-    root.dataset.view = mode;
-    showBack = false; // reset flip when switching
-    renderCard();
+  // expand/collapse details
+  const expanded = {};
+  function applyExpand(expand, animate){
+    expandBtn.textContent = expand ? '−' : '+';
+    expandBtn.setAttribute('aria-label', expand ? 'Hide details' : 'Show details');
+    expandBtn.setAttribute('aria-expanded', expand);
+    if (expand) {
+      detailsEl.hidden = false;
+      if (animate) {
+        requestAnimationFrame(() => {
+          detailsEl.style.maxHeight = '800px';
+          detailsEl.style.opacity = '1';
+        });
+      } else {
+        detailsEl.style.maxHeight = '800px';
+        detailsEl.style.opacity = '1';
+      }
+    } else {
+      if (animate) {
+        detailsEl.style.maxHeight = '0';
+        detailsEl.style.opacity = '0';
+        detailsEl.addEventListener('transitionend', () => { detailsEl.hidden = true; }, { once: true });
+      } else {
+        detailsEl.style.maxHeight = '0';
+        detailsEl.style.opacity = '0';
+        detailsEl.hidden = true;
+      }
+    }
+  }
+  expandBtn.addEventListener('click', () => {
+    const c = cards[idx];
+    const now = !expanded[c.id];
+    expanded[c.id] = now;
+    applyExpand(now, true);
+    if (now) detailsEl.focus();
   });
 
   // audio helpers
@@ -208,32 +231,26 @@ async function renderReview(query) {
   };
 
 
-  // render card (no duplicate English, click term flips in flash)
+  // render card
   function renderCard() {
     const c = cards[idx];
-    const isDetail = (STATE.viewMode === 'detail');
+    const isExpanded = !!expanded[c.id];
 
     // image
     imgEl.innerHTML = c.image
       ? `<img src="${c.image}" alt="${c.front}">`
       : `<div class="no-image muted">No image</div>`;
 
-    // phrase + phonetic
-    if (isDetail) {
-      termEl.textContent = c.front;              // Welsh always on top in detailed
-      phonEl.textContent = c.phonetic || '';
-      transEl.textContent = c.back || '';        // English shown once below
-      transEl.classList.remove('hidden');
-    } else {
-      termEl.textContent = showBack ? c.back : c.front; // flip between Welsh/English
-      phonEl.textContent = '';                            // keep flashcard clean
-      transEl.textContent = '';                           // never show separate translation line in flash
-      transEl.classList.add('hidden');
-    }
+    // phrase
+    termEl.textContent = showBack ? c.back : c.front;
 
-    // breakdown (detail only)
+    // details
+    phonEl.textContent = c.phonetic || '';
+    transEl.textContent = c.back || '';
+
+    // breakdown
     brkEl.innerHTML = '';
-    if (isDetail && c.word_breakdown) {
+    if (c.word_breakdown) {
       const list = document.createElement('div');
       list.className = 'breakdown-list';
       parsePairs(c.word_breakdown).forEach(pair => {
@@ -246,19 +263,14 @@ async function renderReview(query) {
     }
 
     // usage
-    useEl.textContent = isDetail ? (c.usage_note || '') : '';
+    useEl.textContent = c.usage_note || '';
 
-    // example (detail always; flash only on back if you want)
-    if (isDetail) {
-      exEl.innerHTML = c.example ? `<div class="ex-welsh">${c.example}</div>` : '';
-    } else {
-      exEl.innerHTML = showBack && c.example ? `<div class="ex-welsh">${c.example}</div>` : '';
-    }
+    // example
+    exEl.innerHTML = c.example ? `<div class="ex-welsh">${c.example}</div>` : '';
 
-
-    // patterns (detail only) — tap anywhere in the area to toggle English
+    // patterns — tap anywhere in the area to toggle English
     patEl.innerHTML = '';
-    if (isDetail && c.pattern_examples) {
+    if (c.pattern_examples) {
       const normalize = s => (s || '').toLowerCase().trim();
 
       // Use your existing parsePatterns so separators stay consistent (/, or ,)
@@ -307,13 +319,13 @@ async function renderReview(query) {
       }
     }
 
-
-
     // progress
     progEl.textContent = `Card ${idx + 1} of ${cards.length}`;
 
     // click-to-flip behaviour
-    termEl.style.cursor = (STATE.viewMode === 'flash') ? 'pointer' : 'default';
+    termEl.style.cursor = 'pointer';
+
+    applyExpand(isExpanded, false);
   }
 
   // initial render
@@ -332,12 +344,10 @@ async function renderReview(query) {
     const c = cards[idx];
     if (c.audio) playAudio(c.audio);
   });
-  termEl.addEventListener('click', () => {
-    if (STATE.viewMode === 'flash') {
+    termEl.addEventListener('click', () => {
       showBack = !showBack;
       renderCard();
-    }
-  });
+    });
   nextBtn.addEventListener('click', () => {
     stopAudio();
     idx = (idx + 1) % cards.length;
@@ -364,7 +374,7 @@ async function renderReview(query) {
     if (e.key === 'ArrowRight' || e.key === 'Enter') { e.preventDefault(); nextBtn.click(); }
     if (e.key === 'ArrowLeft') { e.preventDefault(); prevBtn.click(); }
     if (e.key?.toLowerCase() === 'a') { e.preventDefault(); audioBtn.click(); }
-    if (e.key?.toLowerCase() === 'f' && STATE.viewMode === 'flash') { e.preventDefault(); termEl.click(); }
+    if (e.key?.toLowerCase() === 'f') { e.preventDefault(); termEl.click(); }
   };
 
   return wrap;
