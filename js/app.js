@@ -2,7 +2,10 @@
 
 const DECKS = [{ id: 'welsh_phrases_A1', name: 'Welsh – A1 Phrases', count: 116 }];
 
-const SETTINGS = { newPerDay: 5 };
+const SETTINGS = {
+  newPerDay: 5,
+  graceMode: loadGraceMode()
+};
 
 const STORAGE = {
   theme: 'fc_theme',
@@ -172,6 +175,15 @@ function loadExamplesEN() {
 function setExamplesEN(v) {
   STATE.showExamplesEN = !!v;
   localStorage.setItem(STORAGE.examplesEN, String(!!v));
+}
+
+function loadGraceMode() {
+  const saved = localStorage.getItem('graceMode');
+  return saved === null ? true : saved === 'true';
+}
+function setGraceMode(v) {
+  SETTINGS.graceMode = !!v;
+  localStorage.setItem('graceMode', String(SETTINGS.graceMode));
 }
 
 async function updateStatusPills(){
@@ -569,6 +581,23 @@ function renderSettings(){
     list.appendChild(card);
   });
   wrap.appendChild(list);
+
+  const sub2 = document.createElement('h2');
+  sub2.className = 'h2';
+  sub2.textContent = 'Options';
+  wrap.appendChild(sub2);
+
+  const optCard = document.createElement('div');
+  optCard.className = 'card';
+  optCard.style.padding = '10px';
+  optCard.innerHTML = `
+    <label style="display:flex; align-items:center; gap:8px; cursor:pointer;">
+      <input type="checkbox" id="graceToggle"> Grace Mode (don’t shorten on late reviews)
+    </label>`;
+  const chk = optCard.querySelector('input');
+  chk.checked = SETTINGS.graceMode;
+  chk.addEventListener('change', e => setGraceMode(e.target.checked));
+  wrap.appendChild(optCard);
   return wrap;
 }
 
