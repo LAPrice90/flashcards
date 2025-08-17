@@ -95,6 +95,7 @@ async function updateStatusPills(){
   });
   const strugglingCount = enriched.filter(x=>x.status==='Struggling').length;
   const reviewDue       = await fcGetTestQueueCount();
+  await fcUpdateQuizBadge(reviewDue);
   const daily = loadNewDaily(deckId);
   const today = todayKey();
   const usedToday = daily.date === today ? (daily.used || 0) : 0;
@@ -352,7 +353,7 @@ async function fcGetTestQueueCount(){
     const arr = attempts[r.id] || [];
     for(let i=arr.length-1;i>=0;i--){
       const a=arr[i];
-      if(a.pass){
+      if(a.pass && a.score !== false){
         if(now - a.ts < SCORE_COOLDOWN_MS) return false;
         break;
       }
@@ -361,6 +362,24 @@ async function fcGetTestQueueCount(){
   }).length;
 }
 window.fcGetTestQueueCount = fcGetTestQueueCount;
+
+async function fcUpdateQuizBadge(raw){
+  if(raw === undefined) raw = await fcGetTestQueueCount();
+  const sessionDue = Math.min(raw, SESSION_MAX);
+  const queued = Math.max(raw - SESSION_MAX, 0);
+  const badge = document.getElementById('b-quiz');
+  if(badge) badge.textContent = sessionDue;
+  const pill = document.getElementById('quizQueued');
+  if(pill){
+    if(queued>0){
+      pill.textContent = `+${queued} queued`;
+      pill.classList.remove('hidden');
+    } else {
+      pill.classList.add('hidden');
+    }
+  }
+}
+window.fcUpdateQuizBadge = fcUpdateQuizBadge;
 
 function getDailyNewAllowance(unseenCount, newTodayUsed, strugglingCount){
   const base = SETTINGS.newPerDay;

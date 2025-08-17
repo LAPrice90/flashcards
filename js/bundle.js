@@ -977,6 +977,7 @@ function fireProgressEvent(payload){
   let wrong = [];
   let practiceMode = false;
   let seenThisSession = new Set();
+  let sessionDue = 0;
 
   /* ---------- Small helpers ---------- */
 
@@ -1056,7 +1057,7 @@ function fireProgressEvent(payload){
       const arr = attempts[c.id] || [];
       for (let i = arr.length - 1; i >= 0; i--) {
         const a = arr[i];
-        if (a.pass) {
+        if (a.pass && a.score !== false) {
           if (now - a.ts < SCORE_COOLDOWN_MS) return false;
           break;
         }
@@ -1271,6 +1272,7 @@ function fireProgressEvent(payload){
         <div class="flashcard-progress muted">Nice work!</div>
       </div>`;
     window.dispatchEvent(new CustomEvent('fc:module-complete',{ detail:{ module:'test' }}));
+    if(window.fcUpdateQuizBadge) window.fcUpdateQuizBadge();
   }
 
   /* ---------- Flow ---------- */
@@ -1304,6 +1306,9 @@ function fireProgressEvent(payload){
       active.forEach(c=>{ (groups[c.conf] = groups[c.conf] || []).push(c); });
       const confKeys = Object.keys(groups).map(Number).sort((a,b)=>a-b);
       active = confKeys.flatMap(conf=>shuffle(groups[conf]));
+      sessionDue = Math.min(active.length, SESSION_MAX);
+      if(window.fcUpdateQuizBadge) window.fcUpdateQuizBadge(active.length);
+      active = active.slice(0, SESSION_MAX);
       deck = active;
       idx = 0; correct = 0; wrong = [];
       renderCard();
@@ -1319,7 +1324,10 @@ function fireProgressEvent(payload){
   }
 
   async function mountIfTestRoute() {
-    if (routeName() !== 'test') return;
+    if (routeName() !== 'test') {
+      if(window.fcUpdateQuizBadge) window.fcUpdateQuizBadge();
+      return;
+    }
 
     document.querySelectorAll('.nav a').forEach(a =>
       a.classList.toggle('active', a.getAttribute('href') === '#/test')
@@ -1486,6 +1494,7 @@ async function updateStatusPills(){
   });
   const strugglingCount = enriched.filter(x=>x.status==='Struggling').length;
   const reviewDue       = await fcGetTestQueueCount();
+  await fcUpdateQuizBadge(reviewDue);
   const daily = loadNewDaily(deckId);
   const today = todayKey();
   const usedToday = daily.date === today ? (daily.used || 0) : 0;
@@ -1743,7 +1752,7 @@ async function fcGetTestQueueCount(){
     const arr = attempts[r.id] || [];
     for(let i=arr.length-1;i>=0;i--){
       const a=arr[i];
-      if(a.pass){
+      if(a.pass && a.score !== false){
         if(now - a.ts < SCORE_COOLDOWN_MS) return false;
         break;
       }
@@ -1752,6 +1761,24 @@ async function fcGetTestQueueCount(){
   }).length;
 }
 window.fcGetTestQueueCount = fcGetTestQueueCount;
+
+async function fcUpdateQuizBadge(raw){
+  if(raw === undefined) raw = await fcGetTestQueueCount();
+  const sessionDue = Math.min(raw, SESSION_MAX);
+  const queued = Math.max(raw - SESSION_MAX, 0);
+  const badge = document.getElementById('b-quiz');
+  if(badge) badge.textContent = sessionDue;
+  const pill = document.getElementById('quizQueued');
+  if(pill){
+    if(queued>0){
+      pill.textContent = `+${queued} queued`;
+      pill.classList.remove('hidden');
+    } else {
+      pill.classList.add('hidden');
+    }
+  }
+}
+window.fcUpdateQuizBadge = fcUpdateQuizBadge;
 
 function getDailyNewAllowance(unseenCount, newTodayUsed, strugglingCount){
   const base = SETTINGS.newPerDay;
