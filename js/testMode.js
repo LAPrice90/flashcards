@@ -199,24 +199,47 @@
   /* ---------- Build the test queue (struggling-first) ---------- */
   async function loadDeckSorted(deckId){ return await loadDeckRows(deckId || dk); }
 
-  function classifyStruggling(cardId, attemptsMap){
-    const arr = attemptsMap[cardId] || [];
-    if (!arr.length) return true; // unseen in attempts but “active” → likely newish → treat as struggling
-    const recent = arr.slice(-3);
-    const recentFails = recent.filter(a => a.score !== false && a.pass === false).length;
-    const acc = lastNAccuracy(cardId, SCORE_WINDOW, attemptsMap);
-    const lastTs = recent.length ? recent[recent.length-1].ts : 0;
-    const failedRecently = recent.length && recent[recent.length-1].pass === false && (Date.now() - lastTs) < (48*3600*1000);
-    // struggling if poor accuracy or several recent fails or a fresh fail in last 48h
-    return acc < 40 || recentFails >= 2 || failedRecently;
+  function deriveAttemptMeta(arr){
+    const a = arr || [];
+    let lastFailAt = 0;
+    let lastFails = 0;
+    for(let i=a.length-1;i>=0;i--){
+      const at=a[i];
+      if(at.score === false) continue;
+      if(!at.pass){
+        if(!lastFailAt) lastFailAt = at.ts || 0;
+        lastFails++;
+      }else{
+        break;
+      }
+    }
+    if(!lastFailAt){
+      for(let i=a.length-1;i>=0;i--){
+        const at=a[i];
+        if(at.pass===false){ lastFailAt = at.ts || 0; break; }
+      }
+    }
+    return { attempts:a.length, lastFails, lastFailAt };
   }
 
   function buildQueue(allCards){
     // 1) compute confidence + struggling flag
     const attemptsMap = loadAttempts();
+    const seenMap = loadProgressSeen();
     allCards.forEach(c => {
-      c.conf = lastNAccuracy(c.id, SCORE_WINDOW, attemptsMap); // 0..100
-      c.isStruggling = classifyStruggling(c.id, attemptsMap);
+      const arr = attemptsMap[c.id] || [];
+      const acc = lastNAccuracy(c.id, SCORE_WINDOW, attemptsMap);
+      const meta = deriveAttemptMeta(arr);
+      const bucket = FC_UTILS.getBucketFromAccuracy({
+        accPct: acc,
+        attempts: meta.attempts,
+        lastFails: meta.lastFails,
+        lastFailAt: meta.lastFailAt,
+        isSeen: !!seenMap[c.id],
+        isAttempted: meta.attempts > 0
+      });
+      c.conf = acc;
+      c.isStruggling = bucket === FC_UTILS.BUCKETS.STRUGGLING;
     });
 
     // 2) split
