@@ -22,6 +22,72 @@ const SCORE_COOLDOWN_MS = 60 * 60 * 1000; // 60 minutes
 const STRUGGLE_CAP = 10;
 const SESSION_MAX = 15;
 
+function hideRestrictionToast(){
+  const el=document.getElementById('restrictionToast');
+  if(!el) return;
+  el.remove();
+  document.removeEventListener('keydown',onToastKey);
+  window.removeEventListener('popstate',hideRestrictionToast);
+  window.removeEventListener('hashchange',hideRestrictionToast);
+}
+
+function onToastKey(e){ if(e.key==='Escape') hideRestrictionToast(); }
+
+function showRestrictionToast(){
+  if(document.getElementById('restrictionToast')) return;
+  const toast=document.createElement('div');
+  toast.id='restrictionToast';
+  toast.setAttribute('aria-live','polite');
+  toast.style.position='fixed';
+  toast.style.left='50%';
+  toast.style.transform='translateX(-50%)';
+  toast.style.bottom='calc(env(safe-area-inset-bottom,0) + 20px)';
+  toast.style.background='rgba(17,17,17,0.92)';
+  toast.style.color='#fff';
+  toast.style.padding='10px 14px';
+  toast.style.borderRadius='9999px';
+  toast.style.maxWidth='88%';
+  toast.style.display='flex';
+  toast.style.alignItems='center';
+  toast.style.gap='8px';
+  toast.style.zIndex='1000';
+  toast.textContent='Master your current phrases to unlock more.';
+
+  const btn=document.createElement('button');
+  btn.setAttribute('aria-label','Close');
+  btn.textContent='\u00d7';
+  btn.style.width='40px';
+  btn.style.height='40px';
+  btn.style.marginLeft='8px';
+  btn.style.background='transparent';
+  btn.style.border='none';
+  btn.style.color='#fff';
+  btn.style.fontSize='20px';
+  btn.style.cursor='pointer';
+  btn.addEventListener('click',hideRestrictionToast);
+  toast.appendChild(btn);
+
+  document.body.appendChild(toast);
+  document.addEventListener('keydown',onToastKey);
+  window.addEventListener('popstate',hideRestrictionToast);
+  window.addEventListener('hashchange',hideRestrictionToast);
+  setTimeout(hideRestrictionToast,4000);
+}
+
+function maybeShowRestrictionToast(deckId,restricted){
+  const key='np_restrict_state_'+deckId;
+  const today=todayKey();
+  let stored={};
+  try{ stored=JSON.parse(localStorage.getItem(key)||'{}'); }catch{}
+  if(restricted){
+    const shouldShow=(stored.date!==today)||stored.restricted===false||stored.restricted===undefined;
+    localStorage.setItem(key,JSON.stringify({date:today,restricted:true}));
+    if(shouldShow) showRestrictionToast();
+  }else{
+    localStorage.setItem(key,JSON.stringify({date:today,restricted:false}));
+  }
+}
+
 function deckKeyFromState() {
   // Prefer the JSON filename stem already used by the fetch; fall back to STATE.activeDeckId.
   // Known mapping for now:
@@ -710,9 +776,10 @@ async function renderPhraseDashboard(){
   const used = updated.used || 0;
   saveNewDaily(deckId, { date: today, allowed: newTodayAllowed, used });
   const newToday = Math.max(0, newTodayAllowed - used);
+  const restrictedDay = newTodayAllowed < SETTINGS.newPerDay && newToday > 0;
 
   let bannerText = '';
-  if (newTodayAllowed < SETTINGS.newPerDay && newTodayAllowed > 0) {
+  if (restrictedDay) {
     bannerText = 'New phrases reduced';
   } else if (newTodayAllowed === 0 && strugglingCount >= STRUGGLE_CAP) {
     bannerText = 'New phrases paused';
@@ -793,6 +860,16 @@ async function renderPhraseDashboard(){
   wrap.querySelector('#b-new').textContent    = newToday;
   wrap.querySelector('#b-review').textContent = reviewDue;
   wrap.querySelector('#b-quiz').textContent   = quizCount;
+  const newBadge = wrap.querySelector('#b-new');
+  if (restrictedDay) {
+    newBadge.classList.add('restricted');
+    newBadge.setAttribute('aria-label','Restricted: master current phrases to unlock more.');
+  } else {
+    newBadge.classList.remove('restricted');
+    newBadge.removeAttribute('aria-label');
+  }
+  wrap.querySelector('#sk-new .sub').textContent = newToday > 0 ? 'Start today' : 'Come back tomorrow';
+  maybeShowRestrictionToast(deckId, restrictedDay);
   if (quizQueued > 0) {
     const qp = wrap.querySelector('#quizQueued');
     qp.textContent = `+${quizQueued} queued`;
