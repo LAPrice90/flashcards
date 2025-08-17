@@ -204,7 +204,7 @@ function markSeenNow(cardId){
   const entry = prog.seen[cardId] || { firstSeen: today, seenCount: 0 };
   entry.seenCount += 1;
   entry.lastSeen = today;
-  if(!entry.introducedAt) entry.introducedAt = Date.now();
+  if(!entry.introducedAt) entry.introducedAt = new Date().toISOString();
   prog.seen[cardId] = entry;
   localStorage.setItem(progressKey, JSON.stringify(prog));
   if(!wasSeen){ FC_UTILS.consumeNewAllowance(); }

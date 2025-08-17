@@ -123,7 +123,8 @@ function backfillIntroducedAt(){
     if(!arr.length) return;
     const entry = seen[id] || {};
     if(entry.introducedAt) return;
-    entry.introducedAt = arr[0]?.ts || Date.now();
+    const ts = arr[0]?.ts;
+    entry.introducedAt = ts ? new Date(ts).toISOString() : new Date().toISOString();
     if(!entry.firstSeen){
       const d = new Date(entry.introducedAt);
       entry.firstSeen = d.toISOString().slice(0,10);
