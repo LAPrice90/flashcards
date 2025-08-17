@@ -87,6 +87,13 @@
     return n;
   }
 
+  function calcDueDate(intervalDays){
+    const d = new Date();
+    d.setHours(0,0,0,0);
+    d.setDate(d.getDate() + (typeof intervalDays === 'number' ? intervalDays : 1));
+    return d.toISOString();
+  }
+
   function deckKeyFromState(){
     const map = {
       'Welsh – A1 Phrases': 'welsh_phrases_A1',
@@ -109,6 +116,9 @@
     const reviews = entry.reviews || [];
     reviews.push({ date: new Date().toISOString(), result });
     entry.reviews = reviews;
+    const n = typeof entry.interval === 'number' ? entry.interval : 1;
+    entry.interval = clampInterval(n);
+    entry.dueDate = calcDueDate(entry.interval);
     seen[id] = entry;
     prog.seen = seen;
     localStorage.setItem(progressKey, JSON.stringify(prog));
@@ -122,7 +132,8 @@
     getDailyNewAllowance,
     consumeNewAllowance,
     peekAllowance,
-    clampInterval
+    clampInterval,
+    calcDueDate
   };
 
   global.logReview = logReview;

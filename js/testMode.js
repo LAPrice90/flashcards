@@ -223,47 +223,7 @@
   }
 
   function buildQueue(allCards){
-    // 1) compute confidence + struggling flag
-    const attemptsMap = loadAttempts();
-    const seenMap = loadProgressSeen();
-    allCards.forEach(c => {
-      const arr = attemptsMap[c.id] || [];
-      const acc = lastNAccuracy(c.id, SCORE_WINDOW, attemptsMap);
-      const meta = deriveAttemptMeta(arr);
-      const bucket = FC_UTILS.getBucket({
-        accuracyPct: acc,
-        attempts: meta.attempts,
-        introducedAt: seenMap[c.id] && (seenMap[c.id].introducedAt || seenMap[c.id].firstSeen)
-      });
-      c.conf = acc;
-      c.isStruggling = bucket === FC_UTILS.BUCKETS.STRUGGLING;
-    });
-
-    // 2) split
-    const struggling = allCards.filter(c => c.isStruggling);
-    const maintenance = allCards.filter(c => !c.isStruggling);
-
-    // 3) order within buckets:
-    // struggling: lowest confidence first, then older last attempt first
-    const lastTs = id => {
-      const arr = attemptsMap[id] || [];
-      return arr.length ? arr[arr.length-1].ts : 0;
-    };
-    struggling.sort((a,b) => (a.conf - b.conf) || (lastTs(a.id) - lastTs(b.id)));
-    // maintenance: lower confidence first but still mix
-    maintenance.sort((a,b) => (a.conf - b.conf) || (lastTs(a.id) - lastTs(b.id)));
-
-    // 4) take up to SESSION_MAX with a target mix (10 struggling, 5 maintenance)
-    const takeStrug = Math.min(10, struggling.length, SESSION_MAX);
-    const takeMaint = Math.min(SESSION_MAX - takeStrug, maintenance.length);
-    const q = struggling.slice(0, takeStrug).concat(maintenance.slice(0, takeMaint));
-
-    // If still short (e.g., tiny deck), just add more maintenance
-    if (q.length < SESSION_MAX) {
-      const extra = maintenance.slice(takeMaint, takeMaint + (SESSION_MAX - q.length));
-      q.push(...extra);
-    }
-    return q;
+    return allCards.sort((a,b)=>a.due - b.due);
   }
 
   /* ---------- Session state ---------- */
@@ -311,12 +271,14 @@
     const attempts = loadAttempts();
     const session = (()=>{ try{ return JSON.parse(localStorage.getItem(SESSION_KEY) || '{}'); } catch{ return {}; } })();
     const doneSet = new Set(session.done || []);
-    const now = Date.now();
+    const today = new Date(); today.setHours(0,0,0,0);
+    const now = today.getTime();
 
     // "Due" logic:
     // - Only cards that are "active" (seen/attempted)
     // - Exclude cards completed earlier in THIS session
     // - Exclude cards that had a counted PASS within last hour (cooldown)
+    // - Only serve cards with dueDate <= today
     const active = base.filter(c => {
       if (!isActiveCard(c.id, seen, attempts)) return false;
       if (doneSet.has(c.id)) return false;
@@ -328,6 +290,10 @@
           break;
         }
       }
+      const dueStr = seen[c.id] && seen[c.id].dueDate;
+      const due = dueStr ? Date.parse(dueStr) : 0;
+      if(due > now) return false;
+      c.due = due;
       return true;
     });
 

@@ -458,7 +458,8 @@ async function fcGetTestQueueCount(){
   const activeRows = rows.filter(r => seen[r.id] || (attempts[r.id] && attempts[r.id].length > 0));
   const session = (()=>{ try{ return JSON.parse(localStorage.getItem(LS_TEST_SESSION) || '{}'); } catch{ return {}; } })();
   const doneSet = new Set(session.done || []);
-  const now = Date.now();
+  const today = new Date(); today.setHours(0,0,0,0);
+  const now = today.getTime();
   return activeRows.filter(r=>{
     if(doneSet.has(r.id)) return false;
     const arr = attempts[r.id] || [];
@@ -469,6 +470,9 @@ async function fcGetTestQueueCount(){
         break;
       }
     }
+    const dueStr = seen[r.id] && seen[r.id].dueDate;
+    const due = dueStr ? Date.parse(dueStr) : 0;
+    if(due > now) return false;
     return true;
   }).length;
 }
