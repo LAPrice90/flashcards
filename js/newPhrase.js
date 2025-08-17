@@ -322,7 +322,7 @@ async function renderNewPhrase(){
     <section class="learn-card is-phrases">
       <div class="learn-card-header">
         <div class="lc-left"><img src="media/icons/New%20Phrases.png" alt="" class="lc-icon"><h2 class="lc-title">New Phrases</h2></div>
-        <div class="lc-right"><span class="pill default" id="np-allowance" style="display:none;"></span></div>
+        <div class="lc-right"><span class="pill default" id="np-allowance" hidden></span></div>
       </div>
       <div class="learn-card-content card--center"><div id="np-root" class="flashcard"></div></div>
     </section>`;
