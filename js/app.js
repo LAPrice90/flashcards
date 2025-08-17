@@ -159,10 +159,7 @@ async function updateStatusPills(){
     const bucket = getBucketFromAccuracy({
       accPct: acc,
       attempts: meta.attempts,
-      lastFails: meta.lastFails,
-      lastFailAt: meta.lastFailAt,
-      isSeen: !!seen[r.id],
-      isAttempted: meta.attempts > 0
+      introducedAt: seen[r.id] && seen[r.id].firstSeen
     });
     return {bucket};
   });
@@ -469,10 +466,7 @@ async function getPhraseBuckets(deckId){
     const bucket = getBucketFromAccuracy({
       accPct: acc,
       attempts: meta.attempts,
-      lastFails: meta.lastFails,
-      lastFailAt: meta.lastFailAt,
-      isSeen: !!seen[r.id],
-      isAttempted: meta.attempts > 0
+      introducedAt: seen[r.id] && seen[r.id].firstSeen
     });
     if(bucket === BUCKETS.STRUGGLING) counts.struggling++;
     else if(bucket === BUCKETS.MASTERED) counts.mastered++;
@@ -542,10 +536,7 @@ async function renderLearned(){
     const bucket = getBucketFromAccuracy({
       accPct: acc,
       attempts: meta.attempts,
-      lastFails: meta.lastFails,
-      lastFailAt: meta.lastFailAt,
-      isSeen: !!seen[r.id],
-      isAttempted: meta.attempts > 0
+      introducedAt: seen[r.id] && seen[r.id].firstSeen
     });
     const status = BUCKET_LABELS[bucket];
     const tries = meta.attempts;
@@ -804,10 +795,7 @@ async function renderPhraseDashboard(){
     const bucket = getBucketFromAccuracy({
       accPct: acc,
       attempts: meta.attempts,
-      lastFails: meta.lastFails,
-      lastFailAt: meta.lastFailAt,
-      isSeen: !!seen[r.id],
-      isAttempted: meta.attempts > 0
+      introducedAt: seen[r.id] && seen[r.id].firstSeen
     });
     return { ...r, acc, bucket };
   });
