@@ -350,7 +350,18 @@
     });
     logReview(c, pass ? 'pass' : 'fail');
     if (FC_SRS.scheduleNextReview) {
+      const beforeInt = c.interval;
+      const beforeDue = c.dueDate;
       FC_SRS.scheduleNextReview(c, pass ? 'pass' : 'fail', { now: new Date(), grace: SETTINGS.graceMode });
+      recordEvent && recordEvent('review_logged', {
+        cardId: c.id,
+        result: pass ? 'pass' : 'fail',
+        oldInterval: beforeInt,
+        newInterval: c.interval,
+        oldDue: beforeDue,
+        newDue: c.dueDate,
+        ease: c.ease
+      });
     }
 
     fireProgressEvent({ type:'attempt', id:c.id, pass });
@@ -396,7 +407,18 @@
         logAttempt(card.id, ok, { behaviour: localTracker.classify().kind, forceNoScore: true });
         logReview(card, ok ? 'pass' : 'fail');
         if (FC_SRS.scheduleNextReview) {
+          const bInt = card.interval;
+          const bDue = card.dueDate;
           FC_SRS.scheduleNextReview(card, ok ? 'pass' : 'fail', { now: new Date(), grace: SETTINGS.graceMode });
+          recordEvent && recordEvent('review_logged', {
+            cardId: card.id,
+            result: ok ? 'pass' : 'fail',
+            oldInterval: bInt,
+            newInterval: card.interval,
+            oldDue: bDue,
+            newDue: card.dueDate,
+            ease: card.ease
+          });
         }
         fireProgressEvent({ type:'attempt', id: card.id, pass: ok });
         if (ok){
@@ -433,7 +455,18 @@
         const counted = logAttempt(card.id, ok, { behaviour: localTracker.classify().kind, forceNoScore: practiceMode });
         logReview(card, ok ? 'pass' : 'fail');
         if (FC_SRS.scheduleNextReview) {
+          const bInt = card.interval;
+          const bDue = card.dueDate;
           FC_SRS.scheduleNextReview(card, ok ? 'pass' : 'fail', { now: new Date(), grace: SETTINGS.graceMode });
+          recordEvent && recordEvent('review_logged', {
+            cardId: card.id,
+            result: ok ? 'pass' : 'fail',
+            oldInterval: bInt,
+            newInterval: card.interval,
+            oldDue: bDue,
+            newDue: card.dueDate,
+            ease: card.ease
+          });
         }
         fireProgressEvent({ type:'attempt', id: card.id, pass: ok });
         if (ok){
@@ -533,6 +566,7 @@
       // Build "due" list and cap to session size
       const allDue = await buildActiveList();
       sessionDue = Math.min(allDue.length, SESSION_MAX);
+      recordEvent && recordEvent('session_started', { countDue: allDue.length, countServed: sessionDue });
       if(window.fcUpdateQuizBadge) window.fcUpdateQuizBadge(allDue.length);
       if (!allDue.length){
         container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">No introduced cards due. Use New Phrases or come back later.</div></div>`;
