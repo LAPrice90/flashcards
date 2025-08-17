@@ -267,41 +267,8 @@
 
   /* ---------- Build active list (due items) ---------- */
   async function buildActiveList(){
-    const rows = await loadDeckSorted(dk);
-    const base = rows.map(r => ({ id:r.id, front:r.front, back:r.back, unit:r.unit, section:r.section, card:r.card }));
-    const seen = loadProgressSeen();
-    const attempts = loadAttempts();
-    const session = (()=>{ try{ return JSON.parse(localStorage.getItem(SESSION_KEY) || '{}'); } catch{ return {}; } })();
-    const doneSet = new Set(session.done || []);
-    const today = new Date(); today.setHours(0,0,0,0);
-    const now = today.getTime();
-
-    // "Due" logic:
-    // - Only cards that are "active" (seen/attempted)
-    // - Exclude cards completed earlier in THIS session
-    // - Exclude cards that had a counted PASS within last hour (cooldown)
-    // - Only serve cards with dueDate <= today
-    const active = base.filter(c => {
-      if (!isActiveCard(c.id, seen, attempts)) return false;
-      if (doneSet.has(c.id)) return false;
-      const arr = attempts[c.id] || [];
-      for (let i=arr.length-1;i>=0;i--){
-        const a = arr[i];
-        if (a.pass && a.score !== false) {
-          if (now - a.ts < SCORE_COOLDOWN_MS) return false;
-          break;
-        }
-      }
-      const dueStr = seen[c.id] && seen[c.id].dueDate;
-      const due = dueStr ? Date.parse(dueStr) : 0;
-      if(due > now) return false;
-      c.due = due;
-      return true;
-    });
-
-    // Order & cap
-    const queue = buildQueue(active).slice(0, SESSION_MAX);
-    return queue;
+    const due = await (globalThis.getDueCards ? getDueCards(dk, { asOfDate: new Date() }) : []);
+    return buildQueue(due);
   }
 
   /* ---------- Renderers ---------- */
@@ -366,6 +333,15 @@
     }
 
     const pass = !skip && equalsLoose(val, c.front);
+
+    if (skip) {
+      logAttempt(c.id, false, { behaviour: behaviour.kind, forceNoScore: true });
+      fireProgressEvent({ type:'attempt', id:c.id, pass:false });
+      wrong.push(c);
+      showResult(false, val);
+      return;
+    }
+
 
     // Decide scoring count for this attempt
     const countThis = logAttempt(c.id, pass, {
@@ -555,14 +531,14 @@
     container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">Loading…</div></div>`;
     try{
       // Build "due" list and cap to session size
-      const due = await buildActiveList();
-      sessionDue = Math.min(due.length, SESSION_MAX);
-      if(window.fcUpdateQuizBadge) window.fcUpdateQuizBadge(due.length);
-      if (!due.length){
+      const allDue = await buildActiveList();
+      sessionDue = Math.min(allDue.length, SESSION_MAX);
+      if(window.fcUpdateQuizBadge) window.fcUpdateQuizBadge(allDue.length);
+      if (!allDue.length){
         container.innerHTML = `<div class="flashcard"><div class="flashcard-progress muted">No introduced cards due. Use New Phrases or come back later.</div></div>`;
         return;
       }
-      deck = due.slice(0, SESSION_MAX);
+      deck = allDue.slice(0, SESSION_MAX);
       idx = 0; correct = 0; wrong = [];
       renderCard();
     }catch(e){
