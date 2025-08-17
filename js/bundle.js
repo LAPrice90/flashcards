@@ -36,6 +36,31 @@ const progressKey = 'progress_' + dk;          // read/write here
 const dailyKey    = 'np_daily_' + dk;          // read in Test/Study; read/write in New Phrases
 const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchanged)
 
+function backfillIntroducedAt(){
+  let updated=0;
+  let prog;
+  try{ prog=JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}'); }catch{ prog={seen:{}}; }
+  const attempts = JSON.parse(localStorage.getItem(attemptsKey) || '{}');
+  const seen = prog.seen || {};
+  Object.keys(attempts).forEach(id=>{
+    const arr = attempts[id] || [];
+    if(!arr.length) return;
+    const entry = seen[id] || {};
+    if(entry.introducedAt) return;
+    entry.introducedAt = (arr[0] && arr[0].ts) || Date.now();
+    if(!entry.firstSeen){
+      const d=new Date(entry.introducedAt);
+      entry.firstSeen=d.toISOString().slice(0,10);
+    }
+    seen[id]=entry;
+    updated++;
+  });
+  if(updated){ prog.seen=seen; localStorage.setItem(progressKey, JSON.stringify(prog)); }
+  return updated;
+}
+const _backfilledCount=backfillIntroducedAt();
+if(_backfilledCount) console.info(`Backfilled introducedAt for ${_backfilledCount} cards`);
+
 function fireProgressEvent(payload){
   window.dispatchEvent(new CustomEvent('fc:progress-updated', { detail: payload || {} }));
 }
@@ -108,11 +133,14 @@ function fireProgressEvent(payload){
     const today = new Date().toISOString().slice(0,10);
     const prog = JSON.parse(localStorage.getItem(progressKey) || '{"seen":{}}');
     if (!prog.seen) prog.seen = {};
+    const wasSeen = !!prog.seen[cardId];
     const entry = prog.seen[cardId] || { firstSeen: today, seenCount: 0 };
     entry.seenCount += 1;
     entry.lastSeen = today;
+    if(!entry.introducedAt) entry.introducedAt = Date.now();
     prog.seen[cardId] = entry;
     localStorage.setItem(progressKey, JSON.stringify(prog));
+    if(!wasSeen){ FC_UTILS.consumeNewAllowance(); }
   }
 
   function bumpDailyUsed(){
@@ -134,7 +162,16 @@ function fireProgressEvent(payload){
     const attempts = loadAttemptsMap();
     const ids = Object.keys(prog.seen || {});
     if(!ids.length) return true;
-    return ids.every(id => categoryFromPct(lastNAccuracy(id, SCORE_WINDOW, attempts)) === 'Mastered');
+    return ids.every(id => {
+      const arr = attempts[id] || [];
+      const acc = lastNAccuracy(id, SCORE_WINDOW, attempts);
+      const bucket = FC_UTILS.getBucket({
+        accuracyPct: acc,
+        attempts: arr.length,
+        introducedAt: prog.seen[id] && (prog.seen[id].introducedAt || prog.seen[id].firstSeen)
+      });
+      return bucket === FC_UTILS.BUCKETS.MASTERED;
+    });
   }
 
   async function syncProgressToGitHub(deckId, prog){
@@ -1868,21 +1905,25 @@ async function getPhraseBuckets(deckId){
   const attempts = loadAttemptsMap();
   const rows = await loadDeckRows(dk);
   const seen = prog.seen || {};
-  const counts = { new:0, untested:0, struggling:0, review:0, mastered:0, total:0 };
+  const counts = { new:0, struggling:0, needsReview:0, mastered:0, total:0 };
+  const debug=[];
   rows.forEach(r=>{
     const arr = attempts[r.id] || [];
     let lastFailAt=0,lastFails=0;
     for(let i=arr.length-1;i>=0;i--){const at=arr[i];if(at.score===false) continue;if(!at.pass){if(!lastFailAt) lastFailAt=at.ts||0;lastFails++;}else{break;}}
     if(!lastFailAt){for(let i=arr.length-1;i>=0;i--){const at=arr[i];if(at.pass===false){lastFailAt=at.ts||0;break;}}}
-    if(!seen[r.id] && arr.length===0){counts.untested++;return;}
-    if(arr.length===0){counts.new++;counts.total++;return;}
     const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
-    const bucket = FC_UTILS.getBucketFromAccuracy({accPct:acc,attempts:arr.length,introducedAt:seen[r.id]?seen[r.id].firstSeen:undefined});
-    if(bucket===FC_UTILS.BUCKETS.STRUGGLING) counts.struggling++;
+    const intro = seen[r.id] && (seen[r.id].introducedAt || seen[r.id].firstSeen);
+    const bucket = FC_UTILS.getBucket({accuracyPct:acc,attempts:arr.length,introducedAt:intro});
+    if(debug.length<10) debug.push({id:r.id,introducedAt:intro,attempts:arr.length,accuracyPct:acc,bucket});
+    if(!bucket) return;
+    if(bucket===FC_UTILS.BUCKETS.NEW) counts.new++;
+    else if(bucket===FC_UTILS.BUCKETS.STRUGGLING) counts.struggling++;
+    else if(bucket===FC_UTILS.BUCKETS.NEEDS_REVIEW) counts.needsReview++;
     else if(bucket===FC_UTILS.BUCKETS.MASTERED) counts.mastered++;
-    else counts.review++;
     counts.total++;
   });
+  console.debug("[deck-status]",debug,counts);
   return counts;
 }
 
@@ -1969,12 +2010,12 @@ async function renderLearned(){
         if(a.pass === false){ lastFailAt = a.ts || 0; break; }
       }
     }
-    const bucket = FC_UTILS.getBucketFromAccuracy({
-      accPct: acc,
+    const bucket = FC_UTILS.getBucket({
+      accuracyPct: acc,
       attempts: arr.length,
-      introducedAt: seen[r.id]?seen[r.id].firstSeen:undefined
+      introducedAt: seen[r.id]?(seen[r.id].introducedAt||seen[r.id].firstSeen):undefined
     });
-    const status = FC_UTILS.BUCKET_LABELS[bucket];
+    const status = bucket?FC_UTILS.BUCKET_LABELS[bucket]:"";
     const tries = arr.length;
     return { ...r, acc, status, tries };
   });
@@ -2352,9 +2393,8 @@ async function renderPhraseDashboard(){
       canvas.setAttribute('aria-label','No active phrases yet');
     }else{
       const labels=['Mastered','Needs review','Struggling','New'];
-      const data=[buckets.mastered,buckets.review,buckets.struggling,buckets.new];
+      const data=[buckets.mastered,buckets.needsReview,buckets.struggling,buckets.new];
       const colors=['#0B8457','#FFB200','#D7263D','#1E88E5'];
-      if(buckets.untested>0){labels.push('Untested');data.push(buckets.untested);colors.push('#9E9E9E');}
       new Chart(canvas.getContext('2d'),{type:'doughnut',data:{labels,datasets:[{data,backgroundColor:colors,borderWidth:0}]},options:{cutout:'64%',plugins:{legend:{display:false},tooltip:{enabled:false}},responsive:true,maintainAspectRatio:false}});
       legendEl.innerHTML = labels.map((l,i)=>`<span class="item"><span class="dot" style="background:${colors[i]}"></span>${l} ${data[i]}</span>`).join('');
       legendEl.classList.remove('muted');

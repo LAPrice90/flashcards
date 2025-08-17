@@ -22,7 +22,7 @@ function deckKeyFromState() {
 const dk          = deckKeyFromState();
 const progressKey = 'progress_' + dk;          // read/write here
 const attemptsKey = 'tm_attempts_v1';          // global attempts bucket (unchanged, not used here but reserved)
-const { getBucketFromAccuracy, BUCKETS, BUCKET_LABELS, getDailyNewAllowance } = FC_UTILS;
+const { getBucket, BUCKETS, BUCKET_LABELS, getDailyNewAllowance } = FC_UTILS;
 
 /* Event ping so other modules can react */
 function fireProgressEvent(payload){
@@ -204,6 +204,7 @@ function markSeenNow(cardId){
   const entry = prog.seen[cardId] || { firstSeen: today, seenCount: 0 };
   entry.seenCount += 1;
   entry.lastSeen = today;
+  if(!entry.introducedAt) entry.introducedAt = Date.now();
   prog.seen[cardId] = entry;
   localStorage.setItem(progressKey, JSON.stringify(prog));
   if(!wasSeen){ FC_UTILS.consumeNewAllowance(); }
@@ -258,10 +259,10 @@ function computeAllMastered(deckId, prog){
     const arr = attempts[id] || [];
     const acc = lastNAccuracy(id, SCORE_WINDOW, attempts);
     const meta = deriveAttemptMeta(arr);
-    const bucket = getBucketFromAccuracy({
-      accPct: acc,
+    const bucket = getBucket({
+      accuracyPct: acc,
       attempts: meta.attempts,
-      introducedAt: prog.seen[id] && prog.seen[id].firstSeen
+      introducedAt: prog.seen[id] && (prog.seen[id].introducedAt || prog.seen[id].firstSeen)
     });
     return bucket === BUCKETS.MASTERED;
   });
@@ -402,10 +403,10 @@ async function renderNewPhrase(){
       const arr = attempts[r.id] || [];
       const acc = lastNAccuracy(r.id, SCORE_WINDOW, attempts);
       const meta = deriveAttemptMeta(arr);
-      const bucket = getBucketFromAccuracy({
-        accPct: acc,
+      const bucket = getBucket({
+        accuracyPct: acc,
         attempts: meta.attempts,
-        introducedAt: prog.seen[r.id] && prog.seen[r.id].firstSeen
+        introducedAt: prog.seen[r.id] && (prog.seen[r.id].introducedAt || prog.seen[r.id].firstSeen)
       });
       return {bucket};
     });
