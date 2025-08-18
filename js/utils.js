@@ -88,9 +88,12 @@
   }
 
   function calcDueDate(intervalDays){
+    if(global.FC_SRS && global.FC_SRS.calcDueDateFromInterval){
+      return FC_SRS.calcDueDateFromInterval(new Date(), intervalDays);
+    }
     const d = new Date();
-    d.setHours(0,0,0,0);
-    d.setDate(d.getDate() + (typeof intervalDays === 'number' ? intervalDays : 1));
+    d.setUTCHours(0,0,0,0);
+    d.setUTCDate(d.getUTCDate() + (typeof intervalDays === 'number' ? intervalDays : 1));
     return d.toISOString();
   }
 

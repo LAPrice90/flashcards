@@ -477,23 +477,26 @@ async function fcGetTestQueueCount(){
   const activeRows = rows.filter(r => seen[r.id] || (attempts[r.id] && attempts[r.id].length > 0));
   const session = (()=>{ try{ return JSON.parse(localStorage.getItem(LS_TEST_SESSION) || '{}'); } catch{ return {}; } })();
   const doneSet = new Set(session.done || []);
-  const today = new Date(); today.setHours(0,0,0,0);
-  const now = today.getTime();
-  return activeRows.filter(r=>{
+  const today = new Date(); today.setUTCHours(0,0,0,0);
+
+  const candidates = activeRows.filter(r=>{
     if(doneSet.has(r.id)) return false;
     const arr = attempts[r.id] || [];
     for(let i=arr.length-1;i>=0;i--){
       const a=arr[i];
       if(a.pass && a.score !== false){
-        if(now - a.ts < SCORE_COOLDOWN_MS) return false;
+        if(today.getTime() - a.ts < SCORE_COOLDOWN_MS) return false;
         break;
       }
     }
-    const dueStr = seen[r.id] && seen[r.id].dueDate;
-    const due = dueStr ? Date.parse(dueStr) : 0;
-    if(due > now) return false;
     return true;
-  }).length;
+  }).map(r=>({ id: r.id, dueDate: seen[r.id] && seen[r.id].dueDate }));
+
+  const due = (global.FC_SRS && FC_SRS.getDuePhrases)
+    ? FC_SRS.getDuePhrases(candidates, today)
+    : candidates.filter(c => c.dueDate && new Date(c.dueDate) <= today);
+
+  return due.length;
 }
 window.fcGetTestQueueCount = fcGetTestQueueCount;
 

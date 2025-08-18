@@ -13,6 +13,26 @@
 
 import { persistCard } from './storage.js';
 
+/** Return ISO string for start of current UTC day. */
+export function startOfTodayISO(now = new Date()) {
+  const d = new Date(now);
+  d.setUTCHours(0, 0, 0, 0);
+  return d.toISOString();
+}
+
+/** Add whole days to an ISO timestamp and return ISO string. */
+export function addDaysISO(iso, days) {
+  const d = new Date(iso);
+  d.setUTCDate(d.getUTCDate() + (days || 0));
+  return d.toISOString();
+}
+
+/** Calculate a due date from an interval in days. */
+export function calcDueDateFromInterval(now, intervalDays) {
+  const base = startOfTodayISO(now);
+  return addDaysISO(base, Math.max(1, Math.round(intervalDays || 1)));
+}
+
 /** Clamp an interval in days to the supported range. */
 export function clampInterval(days) {
   return Math.max(1, Math.min(365, Math.round(days || 1)));
@@ -33,21 +53,6 @@ function clamp(val, min, max) {
   return Math.min(Math.max(val, min), max);
 }
 
-/** Add a number of days to a Date and return a new Date. */
-function addDays(date, n) {
-  const d = new Date(date);
-  d.setDate(d.getDate() + n);
-  return d;
-}
-
-/** Difference in whole days between two dates. */
-function daysBetween(start, end) {
-  const msPerDay = 24 * 60 * 60 * 1000;
-  const startUtc = Date.UTC(start.getFullYear(), start.getMonth(), start.getDate());
-  const endUtc = Date.UTC(end.getFullYear(), end.getMonth(), end.getDate());
-  return Math.floor((endUtc - startUtc) / msPerDay);
-}
-
 /**
  * Compute the next review schedule for a card based on the result of a review.
  *
@@ -64,28 +69,23 @@ export function scheduleNextReview(card, result, { now = new Date(), grace = fal
 
   ensureInterval(card);
   let intervalDays = clampInterval(card.interval);
-  let due = addDays(nowDate, intervalDays);
   card.ease = typeof card.ease === 'number' ? card.ease : 2.5;
 
   switch (result) {
     case 'fail':
       intervalDays = Math.max(1, Math.round(intervalDays / 2));
       card.ease -= 0.20;
-      due = nowDate;
       break;
     case 'hard':
       card.ease -= 0.05;
-      due = addDays(nowDate, intervalDays);
       break;
     case 'pass':
       intervalDays = Math.round(intervalDays * card.ease);
       card.ease += 0.05;
-      due = addDays(nowDate, intervalDays);
       break;
     case 'easy':
       intervalDays = Math.round(intervalDays * card.ease * 1.5);
       card.ease += 0.10;
-      due = addDays(nowDate, intervalDays);
       break;
     default:
       throw new Error('Invalid result');
@@ -94,22 +94,12 @@ export function scheduleNextReview(card, result, { now = new Date(), grace = fal
   card.ease = clamp(card.ease, 1.3, 3.0);
   intervalDays = clampInterval(intervalDays);
 
-  let dueDate;
-  if (grace && card.dueDate) {
-    const prevDue = new Date(card.dueDate);
-    if (nowDate > prevDue) {
-      const lateness = daysBetween(prevDue, nowDate); // eslint-disable-line no-unused-vars
-      const newDue = addDays(prevDue, intervalDays);
-      dueDate = newDue > nowDate ? newDue : nowDate;
-    } else {
-      dueDate = due;
-    }
-  } else {
-    dueDate = due;
-  }
-
   card.interval = intervalDays;
-  card.dueDate = dueDate.toISOString();
+
+  const base = (grace && card.dueDate) ? new Date(card.dueDate) : nowDate;
+  const baseISO = startOfTodayISO(base);
+  card.dueDate = addDaysISO(baseISO, card.interval);
+
   card.reviews = Array.isArray(card.reviews) ? card.reviews : [];
   card.reviews.push({ date: nowDate.toISOString(), result });
 
@@ -138,10 +128,22 @@ export function applyIntroPath(card, stepIndex, { now = new Date() } = {}) {
   const steps = nextIntervalsForNew();
   const stepDays = steps[stepIndex] ?? 0;
   const storeInterval = clampInterval(stepDays);
-  const due = addDays(new Date(now), stepDays);
   card.interval = storeInterval;
-  card.dueDate = due.toISOString();
+  const baseISO = startOfTodayISO(now);
+  card.dueDate = addDaysISO(baseISO, card.interval);
   return card;
+}
+
+/** Check if a phrase is due for review. */
+export function isDue(phrase, now = new Date()) {
+  return !!(phrase && phrase.dueDate && new Date(phrase.dueDate) <= now);
+}
+
+/** Return phrases due for review, sorted by dueDate ascending. */
+export function getDuePhrases(all = [], now = new Date()) {
+  return all
+    .filter(p => isDue(p, now))
+    .sort((a, b) => new Date(a.dueDate) - new Date(b.dueDate));
 }
 
 export default {
@@ -149,9 +151,26 @@ export default {
   nextIntervalsForNew,
   applyIntroPath,
   clampInterval,
-  ensureInterval
+  ensureInterval,
+  startOfTodayISO,
+  addDaysISO,
+  calcDueDateFromInterval,
+  isDue,
+  getDuePhrases
 };
 
 if (typeof window !== 'undefined') {
-  window.FC_SRS = { scheduleNextReview, nextIntervalsForNew, applyIntroPath, persistCard, clampInterval, ensureInterval };
+  window.FC_SRS = {
+    scheduleNextReview,
+    nextIntervalsForNew,
+    applyIntroPath,
+    persistCard,
+    clampInterval,
+    ensureInterval,
+    startOfTodayISO,
+    addDaysISO,
+    calcDueDateFromInterval,
+    isDue,
+    getDuePhrases
+  };
 }
