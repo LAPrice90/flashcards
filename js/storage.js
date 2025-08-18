@@ -49,6 +49,16 @@ export function loadDeck() {
         card.dueDate = calcDue(now, card.interval);
         updated = true;
       }
+      if (typeof card.ease !== 'number' || !isFinite(card.ease)) {
+        card.ease = 2.5;
+        updated = true;
+      } else {
+        const clamped = Math.min(3.0, Math.max(1.3, card.ease));
+        if (clamped !== card.ease) {
+          card.ease = clamped;
+          updated = true;
+        }
+      }
     }
     if (updated) saveDeck(deck);
     return deck;
