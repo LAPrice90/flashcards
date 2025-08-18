@@ -208,7 +208,7 @@ function markSeenNow(cardId){
     entry.seenCount = 1;
     entry.introducedAt = new Date().toISOString();
     // Intro step 0: schedule initial review
-    const card = { id: cardId, introducedAt: entry.introducedAt };
+    const card = { id: cardId, introducedAt: entry.introducedAt, ease: 2.5 };
     FC_SRS.applyIntroPath && FC_SRS.applyIntroPath(card, 0);
     FC_SRS.persistCard && FC_SRS.persistCard(card);
     entry.interval = card.interval;

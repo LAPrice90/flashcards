@@ -1,4 +1,4 @@
-import { scheduleNextReview, applyIntroPath } from '../js/srs.js';
+import { scheduleNextReview, applyIntroPath, adjustEase, computeNextInterval } from '../js/srs.js';
 
 function assert(name, fn) {
   try {
@@ -86,5 +86,17 @@ assert('applyIntroPath schedules steps without logging reviews', () => {
   const step2Due = new Date('2024-01-04T00:00:00.000Z').toISOString();
   if (card.interval !== 3 || card.dueDate !== step2Due) throw new Error('step2');
   if (card.reviews.length !== 0) throw new Error('reviews');
+});
+
+// Helper function tests
+assert('adjustEase and computeNextInterval helpers', () => {
+  const phrase = { interval: 2, ease: 2.5 };
+  if (adjustEase(2.5, 'fail') !== 2.3) throw new Error('adj1');
+  if (adjustEase(2.3, 'easy') !== 2.4) throw new Error('adj2');
+  if (adjustEase(2.95, 'easy') !== 3.0) throw new Error('adj3');
+  if (computeNextInterval(2, 2.4, 'pass') !== 5) throw new Error('int1');
+  if (computeNextInterval(5, 2.4, 'easy') !== 18) throw new Error('int2');
+  if (computeNextInterval(5, 2.0, 'fail') !== 2) throw new Error('int3');
+  if (computeNextInterval(1, 1.5, 'fail') !== 1) throw new Error('int4');
 });
 

@@ -53,6 +53,62 @@ function clamp(val, min, max) {
   return Math.min(Math.max(val, min), max);
 }
 
+/** Clamp ease value to supported range. */
+export function clampEase(e) {
+  return clamp(typeof e === 'number' ? e : 2.5, 1.3, 3.0);
+}
+
+/**
+ * Adjust an ease value based on a review result.
+ * @param {number} ease Current ease.
+ * @param {('fail'|'hard'|'pass'|'easy')} result Review outcome.
+ * @returns {number} New ease, clamped to [1.3,3.0].
+ */
+export function adjustEase(ease, result) {
+  let next = typeof ease === 'number' ? ease : 2.5;
+  switch (result) {
+    case 'fail':
+      next -= 0.20; break;
+    case 'hard':
+      next -= 0.05; break;
+    case 'pass':
+      next += 0.05; break;
+    case 'easy':
+      next += 0.10; break;
+  }
+  return clampEase(next);
+}
+
+/**
+ * Compute the next interval in days given current interval, ease and result.
+ * @param {number} interval Current interval in days.
+ * @param {number} ease Current ease factor.
+ * @param {('fail'|'hard'|'pass'|'easy')} result Review outcome.
+ * @returns {number} Next interval in days (clamped to [1,365]).
+ */
+export function computeNextInterval(interval, ease, result) {
+  const cur = typeof interval === 'number' && isFinite(interval) ? interval : 1;
+  const e = typeof ease === 'number' && isFinite(ease) ? ease : 2.5;
+  let days;
+  switch (result) {
+    case 'fail':
+      days = Math.max(1, Math.floor(cur / 2));
+      break;
+    case 'hard':
+      days = Math.round(cur);
+      break;
+    case 'pass':
+      days = Math.round(cur * e);
+      break;
+    case 'easy':
+      days = Math.round(cur * e * 1.5);
+      break;
+    default:
+      days = Math.round(cur);
+  }
+  return clampInterval(days);
+}
+
 /**
  * Compute the next review schedule for a card based on the result of a review.
  *
@@ -152,6 +208,9 @@ export default {
   applyIntroPath,
   clampInterval,
   ensureInterval,
+  clampEase,
+  adjustEase,
+  computeNextInterval,
   startOfTodayISO,
   addDaysISO,
   calcDueDateFromInterval,
@@ -167,6 +226,9 @@ if (typeof window !== 'undefined') {
     persistCard,
     clampInterval,
     ensureInterval,
+    clampEase,
+    adjustEase,
+    computeNextInterval,
     startOfTodayISO,
     addDaysISO,
     calcDueDateFromInterval,
