@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "test:interval": "node tests/interval.spec.js"
+    "test:interval": "node tests/interval.spec.js",
+    "test:due": "node tests/dueDate.spec.js"
   }
 }

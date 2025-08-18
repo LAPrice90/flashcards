@@ -207,7 +207,7 @@ function markSeenNow(cardId){
   if(!wasSeen){
     entry.seenCount = 1;
     entry.introducedAt = new Date().toISOString();
-    // Intro step 0: schedule same-day review
+    // Intro step 0: schedule initial review
     const card = { id: cardId, introducedAt: entry.introducedAt };
     FC_SRS.applyIntroPath && FC_SRS.applyIntroPath(card, 0);
     FC_SRS.persistCard && FC_SRS.persistCard(card);
@@ -216,6 +216,9 @@ function markSeenNow(cardId){
     FC_UTILS.consumeNewAllowance();
   } else {
     FC_SRS.ensureInterval && FC_SRS.ensureInterval(entry);
+    if(!entry.dueDate && FC_SRS.calcDueDateFromInterval){
+      entry.dueDate = FC_SRS.calcDueDateFromInterval(new Date(), entry.interval);
+    }
   }
   prog.seen[cardId] = entry;
   localStorage.setItem(progressKey, JSON.stringify(prog));
