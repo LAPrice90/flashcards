@@ -42,11 +42,11 @@ assert('Card life cycle through intro, reviews, grace and easy', () => {
   scheduleNextReview(card, 'fail', { now: day1 });
   if (card.interval !== 1) throw new Error(`interval ${card.interval}`);
   if (Math.abs(card.ease - 2.3) > 1e-9) throw new Error(`ease ${card.ease}`);
-  const day2 = addDays(day1, 1);
-  if (card.dueDate !== day2.toISOString()) throw new Error('due after fail');
+  if (card.dueDate !== addDays(day1, 1).toISOString()) throw new Error('due after fail');
   if (card.reviews.length !== 1 || card.reviews[0].result !== 'fail') throw new Error('review log after fail');
 
   // Next day: pass
+  const day2 = addDays(day1, 1);
   scheduleNextReview(card, 'pass', { now: day2 });
   const day4 = addDays(day2, 2);
   if (card.interval !== 2) throw new Error(`interval2 ${card.interval}`);
